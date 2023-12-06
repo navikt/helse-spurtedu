@@ -1,0 +1,20 @@
+apiVersion: nais.io/v1alpha1
+kind: Application
+metadata:
+  name: spurtedu
+  namespace: tbd
+  labels:
+    team: tbd
+spec:
+  image: {{image}}
+  liveness:
+    path: /isalive
+  readiness:
+    path: /isready
+  prometheus:
+    path: /metrics
+  secureLogs:
+    enabled: true
+  redis:
+    - instance: oppslag
+      access: readwrite
