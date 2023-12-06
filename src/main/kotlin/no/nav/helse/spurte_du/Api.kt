@@ -11,9 +11,11 @@ import redis.clients.jedis.DefaultJedisClientConfig
 import redis.clients.jedis.HostAndPort
 import redis.clients.jedis.Jedis
 import redis.clients.jedis.JedisPool
+import redis.clients.jedis.JedisPoolConfig
 import redis.clients.jedis.exceptions.JedisException
 import java.lang.Exception
 import java.net.URI
+import java.time.Duration
 import java.util.*
 
 fun Application.api(env: Map<String, String>, logg: Logg, objectMapper: ObjectMapper) {
@@ -28,7 +30,14 @@ fun Application.api(env: Map<String, String>, logg: Logg, objectMapper: ObjectMa
             evaluering
         }
         .build()
-    val pool = JedisPool(HostAndPort(uri.host, uri.port), config)
+    val poolConfig = JedisPoolConfig().apply {
+        minIdle = 1 // minimum antall ledige tilkoblinger
+        setMaxWait(Duration.ofSeconds(3)) // maksimal ventetid på tilkobling
+        testOnBorrow = true // tester tilkoblingen før lån
+        testWhileIdle = true // tester ledige tilkoblinger periodisk
+
+    }
+    val pool = JedisPool(poolConfig, HostAndPort(uri.host, uri.port), config)
     pool.resource.use { jedis ->
         createTestData(jedis, objectMapper)
         logg.info("Lagret testverdier til redis")
