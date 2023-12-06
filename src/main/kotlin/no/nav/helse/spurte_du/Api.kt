@@ -4,12 +4,17 @@ import com.auth0.jwk.JwkProviderBuilder
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.ktor.client.*
+import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.http.auth.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.coroutines.runBlocking
 import redis.clients.jedis.*
 import redis.clients.jedis.exceptions.JedisException
 import java.net.URI
@@ -68,7 +73,8 @@ fun Application.api(env: Map<String, String>, logg: Logg, objectMapper: ObjectMa
                         val verdi = MaskertVerdi.fraJson(objectMapper, maskertVerdi, logg) ?: return@get call.`404`(logg, "Kan ikke deserialisere verdi fra Redis")
 
                         val principal = call.principal<JWTPrincipal>()
-                        val gruppeFraClaims = principal?.getListClaim("groups", String::class)
+                        logg.info("requested er ${principal?.let { "authenticated: ${principal.subject}" } ?: "ikke autentisert"}")
+                        val gruppeFraClaims = call.hentGruppemedlemskap(logg, objectMapper)
                         verdi.låsOpp(gruppeFraClaims, call, logg)
                     }
                 } catch (err: JedisException) {
@@ -103,6 +109,30 @@ private fun AuthenticationConfig.konfigurerJwtAuth(env: Map<String, String>) {
 private suspend fun ApplicationCall.`404`(logg: Logg, hjelpetekst: String) {
     logg.info(hjelpetekst)
     respondText("Finner ikke noe spesielt til deg", status = HttpStatusCode.NotFound)
+}
+
+private fun ApplicationCall.hentGruppemedlemskap(logg: Logg, objectMapper: ObjectMapper): List<String> {
+    val httpAuthHeader = request.parseAuthorizationHeader() ?: return emptyList()
+    if (httpAuthHeader !is HttpAuthHeader.Single) return emptyList()
+    val bearerToken = httpAuthHeader.blob
+
+    logg.info("Henter gruppemedlemskap fra microsoft graph")
+    val httpClient = HttpClient()
+    val body = runBlocking {
+        val response = httpClient.get("https://graph.microsoft.com/v1.0/me/memberOf?\$select=id,displayName") {
+            header(HttpHeaders.Authorization, "Bearer $bearerToken")
+        }
+        response.bodyAsText()
+    }
+    logg.sikker().info("respons fra microsoft graph:\n$body")
+    return try {
+        val json = objectMapper.readTree(body)
+        json.path("value").map { medlemskap ->
+            medlemskap.path("id").asText()
+        }
+    } catch (err: Exception) {
+        emptyList()
+    }
 }
 
 private const val maskerteVerdier = "maskerte_verdier"
