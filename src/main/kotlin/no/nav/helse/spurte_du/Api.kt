@@ -11,8 +11,11 @@ import redis.clients.jedis.DefaultJedisClientConfig
 import redis.clients.jedis.HostAndPort
 import redis.clients.jedis.Jedis
 import redis.clients.jedis.JedisPool
+import redis.clients.jedis.exceptions.JedisException
+import java.lang.Exception
 import java.net.URI
 import java.util.*
+import kotlin.math.log
 
 fun Application.api(env: Map<String, String>, logg: Logg, objectMapper: ObjectMapper) {
     val uri = URI(env.getValue("REDIS_URI_OPPSLAG"))
@@ -47,12 +50,26 @@ fun Application.api(env: Map<String, String>, logg: Logg, objectMapper: ObjectMa
                 )
             }
 
-            pool.resource.use { jedis ->
-                val maskertVerdi = jedis.hget(maskerteVerdier, "$uuid") ?: return@get call.`404`(logg, "Finner ikke verdi i Redis")
-                val verdi = MaskertVerdi.fraJson(objectMapper, maskertVerdi) ?: return@get call.`404`(logg, "Kan ikke deserialisere verdi fra Redis")
+            try {
+                pool.resource.use { jedis ->
+                    val maskertVerdi = jedis.hget(maskerteVerdier, "$uuid") ?: return@get call.`404`(logg, "Finner ikke verdi i Redis")
+                    val verdi = MaskertVerdi.fraJson(objectMapper, maskertVerdi) ?: return@get call.`404`(logg, "Kan ikke deserialisere verdi fra Redis")
 
-                val gruppeFraClaims = "<hent fra claims>"
-                verdi.låsOpp(gruppeFraClaims, call, logg)
+                    val gruppeFraClaims = "<hent fra claims>"
+                    verdi.låsOpp(gruppeFraClaims, call, logg)
+                }
+            } catch (err: JedisException) {
+                logg.error("Feil ved tilkobling til Redis: {}", err.message, err)
+                return@get call.respondText(
+                    "Nå røyk vi på en smell her. Vi får håpe det er forbigående!",
+                    status = HttpStatusCode.InternalServerError
+                )
+            } catch (err: Exception) {
+                logg.error("Ukjent feil oppstod: {}", err.message, err)
+                return@get call.respondText(
+                    "Nå røyk vi på en smell her. Vi får håpe det er forbigående!",
+                    status = HttpStatusCode.InternalServerError
+                )
             }
         }
     }
