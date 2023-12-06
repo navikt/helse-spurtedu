@@ -103,7 +103,7 @@ private sealed class MaskertVerdi {
     protected open val påkrevdTilgang: String? = null
 
     suspend fun låsOpp(tilgang: String?, call: ApplicationCall, logg: Logg) {
-        if (tilgang != påkrevdTilgang) return call.`404`(logg, "Uautorisert tilgang kan ikke innfris")
+        if (påkrevdTilgang != null && tilgang != påkrevdTilgang) return call.`404`(logg, "Uautorisert tilgang kan ikke innfris")
         håndterRespons(call)
     }
     fun lagre(jedis: Jedis, nøkkel: String, objectMapper: ObjectMapper) {
