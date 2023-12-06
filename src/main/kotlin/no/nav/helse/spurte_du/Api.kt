@@ -5,6 +5,9 @@ import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.ktor.client.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.plugins.auth.*
+import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
@@ -69,8 +72,14 @@ fun Application.api(env: Map<String, String>, logg: Logg, objectMapper: ObjectMa
 
                 try {
                     pool.resource.use { jedis ->
-                        val maskertVerdi = jedis.hget(maskerteVerdier, "$uuid") ?: return@get call.`404`(logg, "Finner ikke verdi i Redis")
-                        val verdi = MaskertVerdi.fraJson(objectMapper, maskertVerdi, logg) ?: return@get call.`404`(logg, "Kan ikke deserialisere verdi fra Redis")
+                        val maskertVerdi = jedis.hget(maskerteVerdier, "$uuid") ?: return@get call.`404`(
+                            logg,
+                            "Finner ikke verdi i Redis"
+                        )
+                        val verdi = MaskertVerdi.fraJson(objectMapper, maskertVerdi, logg) ?: return@get call.`404`(
+                            logg,
+                            "Kan ikke deserialisere verdi fra Redis"
+                        )
 
                         val principal = call.principal<JWTPrincipal>()
                         logg.info("requested er ${principal?.let { "authenticated: ${principal.subject}" } ?: "ikke autentisert"}")
@@ -117,7 +126,7 @@ private fun ApplicationCall.hentGruppemedlemskap(logg: Logg, objectMapper: Objec
     val bearerToken = httpAuthHeader.blob
 
     logg.info("Henter gruppemedlemskap fra microsoft graph")
-    val httpClient = HttpClient()
+    val httpClient = HttpClient(CIO)
     val body = runBlocking {
         val response = httpClient.get("https://graph.microsoft.com/v1.0/me/memberOf?\$select=id,displayName") {
             header(HttpHeaders.Authorization, "Bearer $bearerToken")
@@ -139,8 +148,15 @@ private const val maskerteVerdier = "maskerte_verdier"
 private fun createTestData(jedis: Jedis, objectMapper: ObjectMapper) {
     val tbdgruppe = "f787f900-6697-440d-a086-d5bb56e26a9c"
     val testdata = listOf(
-        MaskertVerdi.Url(UUID.fromString("e5d9ccfa-9197-4b1c-8a09-a36b94d38226"), "https://sporing.intern.dev.nav.no/tilstandsmaskin/a19560bf-f025-4b15-8bf1-f6cc716794ea"),
-        MaskertVerdi.Url(UUID.fromString("4d1db5bf-dfdf-48cb-8c77-c5742590da1c"), "https://sporing.intern.dev.nav.no/tilstandsmaskin/384b160c-c95e-48fc-a872-17c9361abe50", tbdgruppe),
+        MaskertVerdi.Url(
+            UUID.fromString("e5d9ccfa-9197-4b1c-8a09-a36b94d38226"),
+            "https://sporing.intern.dev.nav.no/tilstandsmaskin/a19560bf-f025-4b15-8bf1-f6cc716794ea"
+        ),
+        MaskertVerdi.Url(
+            UUID.fromString("4d1db5bf-dfdf-48cb-8c77-c5742590da1c"),
+            "https://sporing.intern.dev.nav.no/tilstandsmaskin/384b160c-c95e-48fc-a872-17c9361abe50",
+            tbdgruppe
+        ),
         MaskertVerdi.Tekst(UUID.fromString("c8a8cfc1-3d9c-4e98-a3d3-813b53a2177e"), "Hei, Verden!"),
         MaskertVerdi.Tekst(UUID.fromString("a56d4623-c376-41b7-9307-12623acae0e7"), "Hei, Tbd!", tbdgruppe)
     )
@@ -172,6 +188,7 @@ private sealed class MaskertVerdi {
         }
 
     }
+
     protected abstract val id: UUID
     protected abstract val data: Map<String, String>
     protected open val påkrevdTilgang: String? = null
@@ -182,10 +199,14 @@ private sealed class MaskertVerdi {
                 url = "/oauth2/login?redirect=/vis_meg/$id",
                 permanent = false
             )
-            if (påkrevdTilgang !in tilganger) return call.`404`(logg, "Uautorisert tilgang kan ikke innfris. Pålogget bruker har ${tilganger.joinToString()}")
+            if (påkrevdTilgang !in tilganger) return call.`404`(
+                logg,
+                "Uautorisert tilgang kan ikke innfris. Pålogget bruker har ${tilganger.joinToString()}"
+            )
         }
         håndterRespons(call)
     }
+
     fun lagre(jedis: Jedis, nøkkel: String, objectMapper: ObjectMapper) {
         jedis.hset(nøkkel, "$id", json(objectMapper))
     }
@@ -193,19 +214,23 @@ private sealed class MaskertVerdi {
     protected abstract suspend fun håndterRespons(call: ApplicationCall)
     protected abstract fun json(objectMapper: ObjectMapper): String
 
-    protected fun json(objectMapper: ObjectMapper, type: String) = objectMapper.writeValueAsString(mapOf(
-        "id" to id,
-        "type" to type,
-        "påkrevdTilgang" to påkrevdTilgang,
-        "data" to data
-    ))
+    protected fun json(objectMapper: ObjectMapper, type: String) = objectMapper.writeValueAsString(
+        mapOf(
+            "id" to id,
+            "type" to type,
+            "påkrevdTilgang" to påkrevdTilgang,
+            "data" to data
+        )
+    )
 
-    class Tekst(override val id: UUID, private val tekst: String, override val påkrevdTilgang: String? = null) : MaskertVerdi() {
+    class Tekst(override val id: UUID, private val tekst: String, override val påkrevdTilgang: String? = null) :
+        MaskertVerdi() {
         override val data = mapOf("tekst" to tekst)
         override fun json(objectMapper: ObjectMapper) = json(objectMapper, Teksttype)
         override suspend fun håndterRespons(call: ApplicationCall) {
             call.respondText("Jeg har fått beskjed om å vise deg <$tekst>")
         }
+
         companion object {
             private const val Teksttype = "tekst"
             fun fraJson(id: UUID, type: String, påkrevdTilgang: String?, data: JsonNode): Tekst? {
@@ -215,7 +240,8 @@ private sealed class MaskertVerdi {
         }
     }
 
-    class Url(override val id: UUID, private val url: String, override val påkrevdTilgang: String? = null) : MaskertVerdi() {
+    class Url(override val id: UUID, private val url: String, override val påkrevdTilgang: String? = null) :
+        MaskertVerdi() {
         override val data = mapOf("url" to url)
         override fun json(objectMapper: ObjectMapper) = json(objectMapper, Urltype)
         override suspend fun håndterRespons(call: ApplicationCall) {

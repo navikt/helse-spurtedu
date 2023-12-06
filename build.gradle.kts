@@ -25,6 +25,7 @@ dependencies {
     api("ch.qos.logback:logback-classic:$logbackClassicVersion")
     api("net.logstash.logback:logstash-logback-encoder:$logbackEncoderVersion")
 
+    api("io.ktor:ktor-client-cio:$ktorVersion")
     api("io.ktor:ktor-server-cio:$ktorVersion")
     api("io.ktor:ktor-server-call-id:$ktorVersion")
     api("io.ktor:ktor-server-content-negotiation:$ktorVersion")
@@ -41,6 +42,7 @@ dependencies {
     api("io.micrometer:micrometer-registry-prometheus:$micrometerRegistryPrometheusVersion")
 
     api("redis.clients:jedis:5.1.0")
+    implementation("io.ktor:ktor-client-auth:2.3.6")
 
     testImplementation("org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion")
     testImplementation("org.junit.jupiter:junit-jupiter-params:$junitJupiterVersion")
