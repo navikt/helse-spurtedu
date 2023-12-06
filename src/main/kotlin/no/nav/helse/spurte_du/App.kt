@@ -63,6 +63,9 @@ fun launchApp(env: Map<String, String>, logg: Logg) {
         factory = CIO,
         environment = applicationEngineEnvironment {
             log = logg
+            connectors.add(EngineConnectorBuilder().apply {
+                this.port = 8080
+            })
             module {
                 install(CallId) {
                     header("callId")
