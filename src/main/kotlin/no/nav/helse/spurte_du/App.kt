@@ -49,15 +49,16 @@ private val objectmapper get() = jacksonObjectMapper()
 
 
 fun main() {
+    val logg = Logg(logg, sikkerlogg)
     val env = System.getenv()
     Thread.currentThread().setUncaughtExceptionHandler { _, e ->
         logg.error("Ufanget exception: {}", e.message, e)
         sikkerlogg.error("Ufanget exception: {}", e.message, e)
     }
-    launchApp(env)
+    launchApp(env, logg)
 }
 
-fun launchApp(env: Map<String, String>) {
+fun launchApp(env: Map<String, String>, logg: Logg) {
     val app = embeddedServer(
         factory = CIO,
         environment = applicationEngineEnvironment {
@@ -69,15 +70,16 @@ fun launchApp(env: Map<String, String>) {
                     generate { UUID.randomUUID().toString() }
                 }
                 install(CallLogging) {
-                    logger = LoggerFactory.getLogger("no.nav.helse.spurte_du.api.CallLogging")
+                    logger = logg.nyLogg("no.nav.helse.spurte_du.api.CallLogging")
                     level = Level.INFO
                     callIdMdc("callId")
                     disableDefaultColors()
                     filter { call -> call.request.path().startsWith("/api/") }
                 }
                 install(ContentNegotiation) { register(ContentType.Application.Json, JacksonConverter(objectmapper)) }
-                requestResponseTracing(LoggerFactory.getLogger("no.nav.helse.spurte_du.api.Tracing"))
+                requestResponseTracing(logg.nyLogg("no.nav.helse.spurte_du.api.Tracing"))
                 nais()
+                api(env, logg)
             }
         }
     )

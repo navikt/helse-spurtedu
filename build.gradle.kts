@@ -36,6 +36,8 @@ dependencies {
     api("io.ktor:ktor-server-metrics-micrometer:$ktorVersion")
     api("io.micrometer:micrometer-registry-prometheus:$micrometerRegistryPrometheusVersion")
 
+    api("redis.clients:jedis:5.1.0")
+
     testImplementation("org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion")
     testImplementation("org.junit.jupiter:junit-jupiter-params:$junitJupiterVersion")
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junitJupiterVersion")
