@@ -1,10 +1,13 @@
 package no.nav.helse.spurte_du
 
+import com.auth0.jwk.JwkProviderBuilder
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.ktor.http.*
 import io.ktor.server.application.*
+import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import redis.clients.jedis.DefaultJedisClientConfig
@@ -15,6 +18,7 @@ import redis.clients.jedis.JedisPoolConfig
 import redis.clients.jedis.exceptions.JedisException
 import java.lang.Exception
 import java.net.URI
+import java.net.URL
 import java.time.Duration
 import java.util.*
 
@@ -43,6 +47,10 @@ fun Application.api(env: Map<String, String>, logg: Logg, objectMapper: ObjectMa
         logg.info("Lagret testverdier til redis")
     }
 
+    authentication {
+        konfigurerJwtAuth(env)
+    }
+
     routing {
         get("/vis_meg/{maskertId?}") {
             val id = call.parameters["maskertId"] ?: return@get call.respondText(
@@ -63,7 +71,8 @@ fun Application.api(env: Map<String, String>, logg: Logg, objectMapper: ObjectMa
                     val maskertVerdi = jedis.hget(maskerteVerdier, "$uuid") ?: return@get call.`404`(logg, "Finner ikke verdi i Redis")
                     val verdi = MaskertVerdi.fraJson(objectMapper, maskertVerdi, logg) ?: return@get call.`404`(logg, "Kan ikke deserialisere verdi fra Redis")
 
-                    val gruppeFraClaims = "<hent fra claims>"
+                    val principal = call.principal<JWTPrincipal>()
+                    val gruppeFraClaims = principal?.getListClaim("groups", String::class)
                     verdi.låsOpp(gruppeFraClaims, call, logg)
                 }
             } catch (err: JedisException) {
@@ -80,6 +89,17 @@ fun Application.api(env: Map<String, String>, logg: Logg, objectMapper: ObjectMa
                 )
             }
         }
+    }
+}
+
+private fun AuthenticationConfig.konfigurerJwtAuth(env: Map<String, String>) {
+    jwt {
+        val jwkProvider = JwkProviderBuilder(URL(env.getValue("AZURE_OPENID_CONFIG_JWKS_URI"))).build()
+        verifier(jwkProvider, env.getValue("AZURE_OPENID_CONFIG_ISSUER")) {
+            withAudience(env.getValue("AZURE_APP_CLIENT_ID"))
+            withClaimPresence("groups")
+        }
+        validate { credentials -> JWTPrincipal(credentials.payload) }
     }
 }
 
@@ -129,8 +149,14 @@ private sealed class MaskertVerdi {
     protected abstract val data: Map<String, String>
     protected open val påkrevdTilgang: String? = null
 
-    suspend fun låsOpp(tilgang: String?, call: ApplicationCall, logg: Logg) {
-        if (påkrevdTilgang != null && tilgang != påkrevdTilgang) return call.`404`(logg, "Uautorisert tilgang kan ikke innfris")
+    suspend fun låsOpp(tilganger: List<String>?, call: ApplicationCall, logg: Logg) {
+        if (påkrevdTilgang != null) {
+            if (tilganger == null) return call.respondRedirect(
+                url = "/oauth2/login?redirect=/vis_meg/$id",
+                permanent = false
+            )
+            if (påkrevdTilgang !in tilganger) return call.`404`(logg, "Uautorisert tilgang kan ikke innfris. Pålogget bruker har ${tilganger.joinToString()}")
+        }
         håndterRespons(call)
     }
     fun lagre(jedis: Jedis, nøkkel: String, objectMapper: ObjectMapper) {

@@ -29,6 +29,10 @@ dependencies {
     api("io.ktor:ktor-server-call-id:$ktorVersion")
     api("io.ktor:ktor-server-content-negotiation:$ktorVersion")
     api("io.ktor:ktor-serialization-jackson:$ktorVersion")
+    api("io.ktor:ktor-server-auth:$ktorVersion")
+    api("io.ktor:ktor-server-auth-jwt:$ktorVersion") {
+        exclude(group = "junit")
+    }
 
     api("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
     api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion")
