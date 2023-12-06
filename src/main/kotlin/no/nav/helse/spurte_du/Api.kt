@@ -15,7 +15,6 @@ import redis.clients.jedis.exceptions.JedisException
 import java.lang.Exception
 import java.net.URI
 import java.util.*
-import kotlin.math.log
 
 fun Application.api(env: Map<String, String>, logg: Logg, objectMapper: ObjectMapper) {
     val uri = URI(env.getValue("REDIS_URI_OPPSLAG"))
@@ -53,7 +52,7 @@ fun Application.api(env: Map<String, String>, logg: Logg, objectMapper: ObjectMa
             try {
                 pool.resource.use { jedis ->
                     val maskertVerdi = jedis.hget(maskerteVerdier, "$uuid") ?: return@get call.`404`(logg, "Finner ikke verdi i Redis")
-                    val verdi = MaskertVerdi.fraJson(objectMapper, maskertVerdi) ?: return@get call.`404`(logg, "Kan ikke deserialisere verdi fra Redis")
+                    val verdi = MaskertVerdi.fraJson(objectMapper, maskertVerdi, logg) ?: return@get call.`404`(logg, "Kan ikke deserialisere verdi fra Redis")
 
                     val gruppeFraClaims = "<hent fra claims>"
                     verdi.låsOpp(gruppeFraClaims, call, logg)
@@ -94,11 +93,13 @@ private fun createTestData(jedis: Jedis, objectMapper: ObjectMapper) {
 
 private sealed class MaskertVerdi {
     companion object {
-        fun fraJson(objectMapper: ObjectMapper, json: String): MaskertVerdi? {
+        fun fraJson(objectMapper: ObjectMapper, json: String, logg: Logg): MaskertVerdi? {
             val implementasjoner: List<(UUID, String, String?, JsonNode) -> MaskertVerdi?> = listOf(
+                MaskertVerdi.Tekst::fraJson,
                 MaskertVerdi.Url::fraJson
             )
             return try {
+                logg.sikker().info("forsøker å deserialisere: $json")
                 val node = objectMapper.readTree(json)
                 if (!node.hasNonNull("id")) return null
                 val id = UUID.fromString(node.path("id").asText())
@@ -145,9 +146,9 @@ private sealed class MaskertVerdi {
         }
         companion object {
             private const val Teksttype = "tekst"
-            fun fraJson(id: UUID, type: String, påkrevdTilgang: String?, node: JsonNode): Url? {
+            fun fraJson(id: UUID, type: String, påkrevdTilgang: String?, data: JsonNode): Url? {
                 if (type != Teksttype) return null
-                return Url(id, node.path("data").path("tekst").asText(), påkrevdTilgang)
+                return Url(id, data.path("tekst").asText(), påkrevdTilgang)
             }
         }
     }
@@ -161,9 +162,9 @@ private sealed class MaskertVerdi {
 
         companion object {
             private const val Urltype = "url"
-            fun fraJson(id: UUID, type: String, påkrevdTilgang: String?, node: JsonNode): Url? {
+            fun fraJson(id: UUID, type: String, påkrevdTilgang: String?, data: JsonNode): Url? {
                 if (type != Urltype) return null
-                return Url(id, node.path("data").path("url").asText(), påkrevdTilgang)
+                return Url(id, data.path("url").asText(), påkrevdTilgang)
             }
         }
     }
