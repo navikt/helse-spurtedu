@@ -83,7 +83,7 @@ fun Application.api(env: Map<String, String>, logg: Logg, objectMapper: ObjectMa
 
                         val principal = call.principal<JWTPrincipal>()
                         logg.info("requested er ${principal?.let { "authenticated: ${principal.subject}" } ?: "ikke autentisert"}")
-                        val gruppeFraClaims = call.hentGruppemedlemskap(logg, objectMapper)
+                        val gruppeFraClaims = call.hentGruppemedlemskap(env, logg, objectMapper)
                         verdi.låsOpp(gruppeFraClaims, call, logg)
                     }
                 } catch (err: JedisException) {
@@ -120,16 +120,40 @@ private suspend fun ApplicationCall.`404`(logg: Logg, hjelpetekst: String) {
     respondText("Finner ikke noe spesielt til deg", status = HttpStatusCode.NotFound)
 }
 
-private fun ApplicationCall.hentGruppemedlemskap(logg: Logg, objectMapper: ObjectMapper): List<String> {
+private fun ApplicationCall.hentGruppemedlemskap(env: Map<String, String>, logg: Logg, objectMapper: ObjectMapper): List<String> {
     val httpAuthHeader = request.parseAuthorizationHeader() ?: return emptyList()
     if (httpAuthHeader !is HttpAuthHeader.Single) return emptyList()
     val bearerToken = httpAuthHeader.blob
 
     logg.info("Henter gruppemedlemskap fra microsoft graph")
     val httpClient = HttpClient(CIO)
+
+    // bytte access token mot et scopet for bruk mot graph api
+    val exchanged = try {
+        runBlocking {
+            val response = httpClient.post(env.getValue("AZURE_OPENID_CONFIG_TOKEN_ENDPOINT")) {
+                contentType(ContentType.Application.FormUrlEncoded)
+                parameters {
+                    append("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer")
+                    append("client_id", env.getValue("AZURE_APP_CLIENT_ID"))
+                    append("client_secret", env.getValue("AZURE_APP_CLIENT_SECRET"))
+                    append("assertion", bearerToken)
+                    append("scope", "https://graph.microsoft.com/.default")
+                    append("requested_token_use", "on_behalf_of")
+                }
+            }
+            objectMapper.readTree(response.bodyAsText())
+                .path("access_token")
+                .asText()
+        }
+    } catch (err: Exception) {
+        logg.info("fikk problemer ved bytting av token")
+        return emptyList()
+    }
+
     val body = runBlocking {
         val response = httpClient.get("https://graph.microsoft.com/v1.0/me/memberOf?\$select=id,displayName") {
-            header(HttpHeaders.Authorization, "Bearer $bearerToken")
+            header(HttpHeaders.Authorization, "Bearer $exchanged")
         }
         response.bodyAsText()
     }
