@@ -79,7 +79,7 @@ fun launchApp(env: Map<String, String>, logg: Logg) {
                 install(ContentNegotiation) { register(ContentType.Application.Json, JacksonConverter(objectmapper)) }
                 requestResponseTracing(logg.nyLogg("no.nav.helse.spurte_du.api.Tracing"))
                 nais()
-                api(env, logg)
+                api(env, logg, objectmapper)
             }
         }
     )
