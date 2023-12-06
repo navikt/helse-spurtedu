@@ -10,6 +10,7 @@ import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.auth.*
 import io.ktor.client.plugins.auth.providers.*
 import io.ktor.client.request.*
+import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.http.auth.*
@@ -134,21 +135,17 @@ private fun ApplicationCall.hentGruppemedlemskap(env: Map<String, String>, logg:
         runBlocking {
             val response = httpClient.post(env.getValue("AZURE_OPENID_CONFIG_TOKEN_ENDPOINT")) {
                 contentType(ContentType.Application.FormUrlEncoded)
-                parameters {
+                setBody(FormDataContent(parameters {
                     append("grant_type", "urn:ietf:params:oauth:grant-type:jwt-bearer")
                     append("client_id", env.getValue("AZURE_APP_CLIENT_ID"))
                     append("client_secret", env.getValue("AZURE_APP_CLIENT_SECRET"))
                     append("assertion", bearerToken)
                     append("scope", "https://graph.microsoft.com/.default")
                     append("requested_token_use", "on_behalf_of")
-                }
+                }))
             }
             val body = response.bodyAsText()
             val json = objectMapper.readTree(body)
-            val loggbar = json.deepCopy<ObjectNode>().apply {
-                remove("access_token")
-            }
-            logg.sikker().info("svar fra utveksling: $loggbar")
             json.path("access_token").asText()
         }
     } catch (err: Exception) {
