@@ -10,13 +10,8 @@ import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import redis.clients.jedis.DefaultJedisClientConfig
-import redis.clients.jedis.HostAndPort
-import redis.clients.jedis.Jedis
-import redis.clients.jedis.JedisPool
-import redis.clients.jedis.JedisPoolConfig
+import redis.clients.jedis.*
 import redis.clients.jedis.exceptions.JedisException
-import java.lang.Exception
 import java.net.URI
 import java.net.URL
 import java.time.Duration
@@ -52,41 +47,43 @@ fun Application.api(env: Map<String, String>, logg: Logg, objectMapper: ObjectMa
     }
 
     routing {
-        get("/vis_meg/{maskertId?}") {
-            val id = call.parameters["maskertId"] ?: return@get call.respondText(
-                "Maksert id mangler fra url",
-                status = HttpStatusCode.BadRequest
-            )
-            val uuid = try {
-                UUID.fromString(id)
-            } catch (err: IllegalArgumentException) {
-                return@get call.respondText(
-                    "Maksert id er jo ikke gyldig uuid",
+        authenticate(optional = true) {
+            get("/vis_meg/{maskertId?}") {
+                val id = call.parameters["maskertId"] ?: return@get call.respondText(
+                    "Maksert id mangler fra url",
                     status = HttpStatusCode.BadRequest
                 )
-            }
-
-            try {
-                pool.resource.use { jedis ->
-                    val maskertVerdi = jedis.hget(maskerteVerdier, "$uuid") ?: return@get call.`404`(logg, "Finner ikke verdi i Redis")
-                    val verdi = MaskertVerdi.fraJson(objectMapper, maskertVerdi, logg) ?: return@get call.`404`(logg, "Kan ikke deserialisere verdi fra Redis")
-
-                    val principal = call.principal<JWTPrincipal>()
-                    val gruppeFraClaims = principal?.getListClaim("groups", String::class)
-                    verdi.låsOpp(gruppeFraClaims, call, logg)
+                val uuid = try {
+                    UUID.fromString(id)
+                } catch (err: IllegalArgumentException) {
+                    return@get call.respondText(
+                        "Maksert id er jo ikke gyldig uuid",
+                        status = HttpStatusCode.BadRequest
+                    )
                 }
-            } catch (err: JedisException) {
-                logg.error("Feil ved tilkobling til Redis: {}", err.message, err)
-                return@get call.respondText(
-                    "Nå røyk vi på en smell her. Vi får håpe det er forbigående!",
-                    status = HttpStatusCode.InternalServerError
-                )
-            } catch (err: Exception) {
-                logg.error("Ukjent feil oppstod: {}", err.message, err)
-                return@get call.respondText(
-                    "Nå røyk vi på en smell her. Vi får håpe det er forbigående!",
-                    status = HttpStatusCode.InternalServerError
-                )
+
+                try {
+                    pool.resource.use { jedis ->
+                        val maskertVerdi = jedis.hget(maskerteVerdier, "$uuid") ?: return@get call.`404`(logg, "Finner ikke verdi i Redis")
+                        val verdi = MaskertVerdi.fraJson(objectMapper, maskertVerdi, logg) ?: return@get call.`404`(logg, "Kan ikke deserialisere verdi fra Redis")
+
+                        val principal = call.principal<JWTPrincipal>()
+                        val gruppeFraClaims = principal?.getListClaim("groups", String::class)
+                        verdi.låsOpp(gruppeFraClaims, call, logg)
+                    }
+                } catch (err: JedisException) {
+                    logg.error("Feil ved tilkobling til Redis: {}", err.message, err)
+                    return@get call.respondText(
+                        "Nå røyk vi på en smell her. Vi får håpe det er forbigående!",
+                        status = HttpStatusCode.InternalServerError
+                    )
+                } catch (err: Exception) {
+                    logg.error("Ukjent feil oppstod: {}", err.message, err)
+                    return@get call.respondText(
+                        "Nå røyk vi på en smell her. Vi får håpe det er forbigående!",
+                        status = HttpStatusCode.InternalServerError
+                    )
+                }
             }
         }
     }
