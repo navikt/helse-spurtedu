@@ -155,9 +155,9 @@ private sealed class MaskertVerdi {
         }
         companion object {
             private const val Teksttype = "tekst"
-            fun fraJson(id: UUID, type: String, påkrevdTilgang: String?, data: JsonNode): Url? {
+            fun fraJson(id: UUID, type: String, påkrevdTilgang: String?, data: JsonNode): Tekst? {
                 if (type != Teksttype) return null
-                return Url(id, data.path("tekst").asText(), påkrevdTilgang)
+                return Tekst(id, data.path("tekst").asText(), påkrevdTilgang)
             }
         }
     }
