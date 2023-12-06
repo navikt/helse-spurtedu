@@ -4,6 +4,7 @@ import com.auth0.jwk.JwkProviderBuilder
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ObjectNode
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.auth.*
@@ -142,9 +143,13 @@ private fun ApplicationCall.hentGruppemedlemskap(env: Map<String, String>, logg:
                     append("requested_token_use", "on_behalf_of")
                 }
             }
-            objectMapper.readTree(response.bodyAsText())
-                .path("access_token")
-                .asText()
+            val body = response.bodyAsText()
+            val json = objectMapper.readTree(body)
+            val loggbar = json.deepCopy<ObjectNode>().apply {
+                remove("access_token")
+            }
+            logg.sikker().info("svar fra utveksling: $loggbar")
+            json.path("access_token").asText()
         }
     } catch (err: Exception) {
         logg.info("fikk problemer ved bytting av token")
