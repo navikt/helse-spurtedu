@@ -109,8 +109,7 @@ fun launchApp(env: Map<String, String>, logg: Logg) {
                     clientSecret = env.getValue("AZURE_APP_CLIENT_SECRET"),
                     objectMapper = objectmapper
                 )
-                val gruppetilganger = Gruppetilganger(azureClient, httpClient, objectmapper)
-
+                val gruppetilganger = Gruppetilganger(jedisPool, azureClient, httpClient, objectmapper)
 
                 authentication {
                     azureClient.konfigurerJwtAuth(this)
