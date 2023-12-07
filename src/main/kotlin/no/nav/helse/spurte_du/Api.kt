@@ -43,7 +43,15 @@ fun Application.api(logg: Logg, gruppetilganger: Gruppetilganger, maskeringer: M
                 """Du må angi en gyldig json-kropp. Eksempel: { "url": "en-url", "påkrevdTilgang": "<en azure gruppe-ID eller NAV-epost>" } eller { "tekst": "en tekst" } """
             ))
             val id = maskeringer.lagre(maskertVerdi)
-            call.respond(SkjulMegRespons(id = id, url = call.url { path("/vis_meg/$id") }))
+            val path = "/vis_meg/$id"
+            call.respond(SkjulMegRespons(
+                id = id,
+                url = call.url {
+                    set("https")
+                    path(path)
+               },
+                path = path
+            ))
         }
     }
 }
@@ -53,7 +61,8 @@ data class ApiFeilmelding(
 )
 data class SkjulMegRespons(
     val id: UUID,
-    val url: String
+    val url: String,
+    val path: String
 )
 data class SkjulMegRequest(
     val url: String?,
