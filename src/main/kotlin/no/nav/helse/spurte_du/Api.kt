@@ -67,7 +67,7 @@ fun Application.api(logg: Logg, gruppetilganger: Gruppetilganger, maskeringer: M
                 </form>
                </body>
                </html>
-            """.trimIndent())
+            """, ContentType.Text.Html)
         }
         post("/skjul_meg") {
             val request = call.receiveNullable<SkjulMegRequest>()
