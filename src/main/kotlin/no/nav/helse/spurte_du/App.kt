@@ -1,14 +1,18 @@
 package no.nav.helse.spurte_du
 
+import com.auth0.jwk.JwkProviderBuilder
 import com.fasterxml.jackson.core.util.DefaultIndenter
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import io.ktor.client.*
 import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
+import io.ktor.server.auth.*
+import io.ktor.server.auth.jwt.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
 import io.ktor.server.metrics.micrometer.*
@@ -31,11 +35,20 @@ import io.prometheus.client.CollectorRegistry
 import io.prometheus.client.exporter.common.TextFormat
 import net.logstash.logback.argument.StructuredArguments.keyValue
 import no.nav.helse.spurte_du.Maskeringer.Companion.lagMaskeringer
+import no.nav.helse.spurte_du.api
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
+import redis.clients.jedis.DefaultJedisClientConfig
+import redis.clients.jedis.HostAndPort
+import redis.clients.jedis.JedisPool
+import redis.clients.jedis.JedisPoolConfig
 import java.io.CharArrayWriter
+import java.net.URI
+import java.net.URL
+import java.time.Duration
 import java.util.*
+import io.ktor.client.engine.cio.CIO as ClientEngineCioCIO
 
 private val logg = LoggerFactory.getLogger("no.nav.helse.spurte_du.App")
 private val sikkerlogg = LoggerFactory.getLogger("tjenestekall")
@@ -83,11 +96,51 @@ fun launchApp(env: Map<String, String>, logg: Logg) {
                 install(ContentNegotiation) { register(ContentType.Application.Json, JacksonConverter(objectmapper)) }
                 requestResponseTracing(logg.nyLogg("no.nav.helse.spurte_du.api.Tracing"))
                 nais()
-                api(env, logg, objectmapper, lagMaskeringer(env, objectmapper, logg))
+
+                val jedisPool = lagJedistilkobling(env, logg)
+                val httpClient = HttpClient(ClientEngineCioCIO)
+                val azureClient = AzureClient(
+                    jwkProvider = JwkProviderBuilder(URL(env.getValue("AZURE_OPENID_CONFIG_JWKS_URI"))).build(),
+                    issuer = env.getValue("AZURE_OPENID_CONFIG_ISSUER"),
+                    httpClient = httpClient,
+                    tokenEndpoint = env.getValue("AZURE_OPENID_CONFIG_TOKEN_ENDPOINT"),
+                    clientId = env.getValue("AZURE_APP_CLIENT_ID"),
+                    clientSecret = env.getValue("AZURE_APP_CLIENT_SECRET"),
+                    objectMapper = objectmapper
+                )
+                val gruppetilganger = Gruppetilganger(azureClient, httpClient, objectmapper)
+
+
+                authentication {
+                    azureClient.konfigurerJwtAuth(this)
+                }
+                api(env, logg, gruppetilganger, lagMaskeringer(jedisPool, objectmapper))
             }
         }
     )
     app.start(wait = true)
+}
+
+private fun lagJedistilkobling(env: Map<String, String>, logg: Logg): JedisPool {
+    val uri = URI(env.getValue("REDIS_URI_OPPSLAG"))
+    val config = DefaultJedisClientConfig.builder()
+        .user(env.getValue("REDIS_USERNAME_OPPSLAG"))
+        .password(env.getValue("REDIS_PASSWORD_OPPSLAG"))
+        .ssl(true)
+        .hostnameVerifier { hostname, session ->
+            val evaluering = hostname == uri.host
+            logg.info("verifiserer vertsnavn $hostname: {}", evaluering)
+            evaluering
+        }
+        .build()
+    val poolConfig = JedisPoolConfig().apply {
+        minIdle = 1 // minimum antall ledige tilkoblinger
+        setMaxWait(Duration.ofSeconds(3)) // maksimal ventetid på tilkobling
+        testOnBorrow = true // tester tilkoblingen før lån
+        testWhileIdle = true // tester ledige tilkoblinger periodisk
+
+    }
+    return JedisPool(poolConfig, HostAndPort(uri.host, uri.port), config)
 }
 
 private const val isaliveEndpoint = "/isalive"

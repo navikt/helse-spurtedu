@@ -49,31 +49,8 @@ class Maskeringer(
     companion object {
         private const val maskerteVerdier = "maskerte_verdier"
 
-        fun lagMaskeringer(env: Map<String, String>, objectMapper: ObjectMapper, logg: Logg): Maskeringer {
-            val jedisPool = lagJedistilkobling(env, logg)
+        fun lagMaskeringer(jedisPool: JedisPool, objectMapper: ObjectMapper): Maskeringer {
             return Maskeringer(jedisPool, objectMapper)
-        }
-
-        private fun lagJedistilkobling(env: Map<String, String>, logg: Logg): JedisPool {
-            val uri = URI(env.getValue("REDIS_URI_OPPSLAG"))
-            val config = DefaultJedisClientConfig.builder()
-                .user(env.getValue("REDIS_USERNAME_OPPSLAG"))
-                .password(env.getValue("REDIS_PASSWORD_OPPSLAG"))
-                .ssl(true)
-                .hostnameVerifier { hostname, session ->
-                    val evaluering = hostname == uri.host
-                    logg.info("verifiserer vertsnavn $hostname: {}", evaluering)
-                    evaluering
-                }
-                .build()
-            val poolConfig = JedisPoolConfig().apply {
-                minIdle = 1 // minimum antall ledige tilkoblinger
-                setMaxWait(Duration.ofSeconds(3)) // maksimal ventetid på tilkobling
-                testOnBorrow = true // tester tilkoblingen før lån
-                testWhileIdle = true // tester ledige tilkoblinger periodisk
-
-            }
-            return JedisPool(poolConfig, HostAndPort(uri.host, uri.port), config)
         }
     }
 }
