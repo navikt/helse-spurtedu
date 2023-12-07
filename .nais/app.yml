@@ -20,7 +20,7 @@ spec:
   azure:
     sidecar:
       enabled: true
-      autoLogin: true
+      autoLogin: false
     application:
       tenant: nav.no
       enabled: true
