@@ -3,9 +3,12 @@ package no.nav.helse.spurte_du
 import com.fasterxml.jackson.core.JsonParseException
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import redis.clients.jedis.Jedis
+import java.lang.Exception
+import java.net.URI
 import java.util.*
 
 sealed class MaskertVerdi {
@@ -91,7 +94,13 @@ sealed class MaskertVerdi {
         override val data = mapOf("url" to url)
         override fun json(objectMapper: ObjectMapper) = json(objectMapper, Urltype)
         override suspend fun håndterRespons(call: ApplicationCall) {
-            call.respondText("Jeg ville ha videresendt deg til $url, men lar være akkurat nå!")
+            try {
+                val uri = URI(url)
+                check(uri.host == "nav.no")
+                call.respondRedirect(url, permanent = true)
+            } catch (err: Exception) {
+                call.respondText(text = "URL er ikke gyldig, eller peker til en ikke-tillatt tjener: <$url>", status = HttpStatusCode.PreconditionFailed)
+            }
         }
 
         companion object {
