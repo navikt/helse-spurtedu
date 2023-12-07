@@ -17,6 +17,10 @@ spec:
     enabled: true
   ingresses:
     - {{ingress}}
+  accessPolicy:
+    inbound:
+      rules:
+        - application: spammer
   azure:
     sidecar:
       enabled: true
