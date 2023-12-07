@@ -101,10 +101,13 @@ data class SkjulMegRequest(
     val tekst: String?,
     val påkrevdTilgang: String?
 ) {
-    fun tilMaskertVerdi() = when {
-        url?.takeUnless { it.isBlank() } != null -> MaskertVerdi.Url(UUID.randomUUID(), url, påkrevdTilgang)
-        tekst?.takeUnless { it.isBlank() } != null -> MaskertVerdi.Tekst(UUID.randomUUID(), tekst, påkrevdTilgang)
-        else -> null
+    fun tilMaskertVerdi(): MaskertVerdi? {
+        val tilgang = påkrevdTilgang.takeUnless { it.isNullOrBlank() }
+        return when {
+            url?.takeUnless { it.isBlank() } != null -> MaskertVerdi.Url(UUID.randomUUID(), url, tilgang)
+            tekst?.takeUnless { it.isBlank() } != null -> MaskertVerdi.Tekst(UUID.randomUUID(), tekst, tilgang)
+            else -> null
+        }
     }
 }
 
