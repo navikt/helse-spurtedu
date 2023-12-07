@@ -10,10 +10,14 @@ import io.ktor.http.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import kotlinx.coroutines.runBlocking
+import redis.clients.jedis.JedisPool
+import redis.clients.jedis.params.SetParams
+import java.security.MessageDigest
 
 class AzureClient(
     private val jwkProvider: JwkProvider,
     private val issuer: String,
+    private val jedisPool: JedisPool,
     private val httpClient: HttpClient,
     private val tokenEndpoint: String,
     private val clientId: String,
@@ -21,7 +25,11 @@ class AzureClient(
     private val objectMapper: ObjectMapper
 ) {
 
-    fun veksleTilOnBehalfOf(token: String, scope: String): String {
+    fun veksleTilOnBehalfOf(logg: Logg, token: String, scope: String): String {
+        return hentTokenFraMellomlager(logg, token, scope) ?: hentTokenFraAzure(logg, token, scope)
+    }
+
+    private fun hentTokenFraAzure(logg: Logg, token: String, scope: String): String {
         return runBlocking {
             val response = httpClient.post(tokenEndpoint) {
                 contentType(ContentType.Application.FormUrlEncoded)
@@ -36,8 +44,30 @@ class AzureClient(
             }
             val body = response.bodyAsText()
             val json = objectMapper.readTree(body)
-            json.path("access_token").asText()
+            val accessToken = json.path("access_token").asText()
+            val expiresIn = json.path("expires_in").asLong()
+            jedisPool.resource.use { jedis ->
+                logg.info("lagrer OBO-token i mellomlager")
+                jedis.set(mellomlagringsnøkkel(token, scope), accessToken, SetParams.setParams().ex(expiresIn))
+            }
+            accessToken
         }
+    }
+
+    private fun hentTokenFraMellomlager(logg: Logg, token: String, scope: String): String? {
+        return jedisPool.resource.use { jedis ->
+            jedis.get(mellomlagringsnøkkel(token, scope))?.also {
+                logg.info("hentet OBO-token fra mellomlager")
+            }
+        }
+    }
+
+    @OptIn(ExperimentalStdlibApi::class)
+    private fun mellomlagringsnøkkel(token: String, scope: String): String {
+        val nøkkel = "$OnBehalfOfTokennøkkel$token$scope".toByteArray()
+        val md = MessageDigest.getInstance("SHA-256")
+        val digest = md.digest(nøkkel)
+        return digest.toHexString()
     }
 
     fun konfigurerJwtAuth(config: AuthenticationConfig) {
@@ -49,5 +79,9 @@ class AzureClient(
             }
             validate { credentials -> JWTPrincipal(credentials.payload) }
         }
+    }
+
+    private companion object {
+        private const val OnBehalfOfTokennøkkel = "obo_"
     }
 }
