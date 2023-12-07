@@ -12,7 +12,6 @@ import io.ktor.http.content.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
-import io.ktor.server.auth.jwt.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
 import io.ktor.server.metrics.micrometer.*
@@ -22,6 +21,7 @@ import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.server.util.*
 import io.ktor.util.*
 import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics
 import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics
@@ -35,7 +35,6 @@ import io.prometheus.client.CollectorRegistry
 import io.prometheus.client.exporter.common.TextFormat
 import net.logstash.logback.argument.StructuredArguments.keyValue
 import no.nav.helse.spurte_du.Maskeringer.Companion.lagMaskeringer
-import no.nav.helse.spurte_du.api
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
@@ -114,7 +113,7 @@ fun launchApp(env: Map<String, String>, logg: Logg) {
                 authentication {
                     azureClient.konfigurerJwtAuth(this)
                 }
-                api(env, logg, gruppetilganger, lagMaskeringer(jedisPool, objectmapper))
+                api(logg, gruppetilganger, lagMaskeringer(jedisPool, objectmapper))
             }
         }
     )

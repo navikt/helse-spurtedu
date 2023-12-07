@@ -46,6 +46,12 @@ class Maskeringer(
         testdata.forEach { it.lagre(jedis, maskerteVerdier, objectMapper) }
     }
 
+    fun lagre(maskertVerdi: MaskertVerdi): UUID {
+        return jedisPool.resource.use { jedis ->
+            maskertVerdi.lagre(jedis, maskerteVerdier, objectMapper)
+        }
+    }
+
     companion object {
         private const val maskerteVerdier = "maskerte_verdier"
 

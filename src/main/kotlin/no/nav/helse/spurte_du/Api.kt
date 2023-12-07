@@ -5,11 +5,13 @@ import io.ktor.http.auth.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
+import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.server.util.*
 import java.util.*
 
-fun Application.api(env: Map<String, String>, logg: Logg, gruppetilganger: Gruppetilganger, maskeringer: Maskeringer) {
+fun Application.api(logg: Logg, gruppetilganger: Gruppetilganger, maskeringer: Maskeringer) {
     maskeringer.lagTestdata(logg)
 
     routing {
@@ -34,6 +36,33 @@ fun Application.api(env: Map<String, String>, logg: Logg, gruppetilganger: Grupp
                 }
             }
         }
+        post("/skjul_meg") {
+            val request = call.receive<SkjulMegRequest>()
+            val maskertVerdi = request.tilMaskertVerdi() ?: return@post call.respond(HttpStatusCode.BadRequest, ApiFeilmelding(
+                """Du må angi en gyldig json-kropp. Eksempel: { "url": "en-url", "påkrevdTilgang": "<en azure gruppe-ID>" } eller { "tekst": "en tekst" } """
+            ))
+            val id = maskeringer.lagre(maskertVerdi)
+            call.respond(SkjulMegRespons(id = id, url = call.url { path("/vis_meg/$id") }))
+        }
+    }
+}
+
+data class ApiFeilmelding(
+    val feilbeskrivelse: String
+)
+data class SkjulMegRespons(
+    val id: UUID,
+    val url: String
+)
+data class SkjulMegRequest(
+    val url: String?,
+    val tekst: String?,
+    val påkrevdTilgang: String?
+) {
+    fun tilMaskertVerdi() = when {
+        url != null -> MaskertVerdi.Url(UUID.randomUUID(), url, påkrevdTilgang)
+        tekst != null -> MaskertVerdi.Tekst(UUID.randomUUID(), tekst, påkrevdTilgang)
+        else -> null
     }
 }
 

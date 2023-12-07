@@ -52,8 +52,9 @@ sealed class MaskertVerdi {
         håndterRespons(call)
     }
 
-    fun lagre(jedis: Jedis, nøkkel: String, objectMapper: ObjectMapper) {
+    fun lagre(jedis: Jedis, nøkkel: String, objectMapper: ObjectMapper): UUID {
         jedis.hset(nøkkel, "$id", json(objectMapper))
+        return id
     }
 
     protected abstract suspend fun håndterRespons(call: ApplicationCall)
