@@ -6,8 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
-import redis.clients.jedis.Jedis
-import java.lang.Exception
 import java.net.URI
 import java.util.*
 
@@ -55,9 +53,8 @@ sealed class MaskertVerdi {
         håndterRespons(call)
     }
 
-    fun lagre(jedis: Jedis, nøkkel: String, objectMapper: ObjectMapper): UUID {
-        jedis.hset(nøkkel, "$id", json(objectMapper))
-        return id
+    fun lagre(maskeringer: Maskeringtjeneste, objectMapper: ObjectMapper): UUID {
+        return maskeringer.lagre(id, json(objectMapper))
     }
 
     protected abstract suspend fun håndterRespons(call: ApplicationCall)

@@ -12,13 +12,17 @@ import redis.clients.jedis.params.SetParams
 import java.security.MessageDigest
 import java.time.Duration
 
+interface Gruppetilgangtjeneste {
+    fun hentGruppemedlemskap(bearerToken: String, logg: Logg): List<String>
+}
+
 class Gruppetilganger(
     private val jedisPool: JedisPool,
     private val azureClient: AzureClient,
     private val httpClient: HttpClient,
     private val objectMapper: ObjectMapper
-) {
-    fun hentGruppemedlemskap(bearerToken: String, logg: Logg): List<String> {
+) : Gruppetilgangtjeneste {
+    override fun hentGruppemedlemskap(bearerToken: String, logg: Logg): List<String> {
         return hentMedlemskapFraMellomlager(bearerToken, logg) ?: hentMedlemskapFraAzure(bearerToken, logg)
     }
 
