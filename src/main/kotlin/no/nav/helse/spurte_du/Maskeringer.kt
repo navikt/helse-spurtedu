@@ -4,10 +4,9 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
-import redis.clients.jedis.*
+import redis.clients.jedis.Jedis
+import redis.clients.jedis.JedisPool
 import redis.clients.jedis.exceptions.JedisException
-import java.net.URI
-import java.time.Duration
 import java.util.*
 
 class Maskeringer(

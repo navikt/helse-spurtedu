@@ -26,10 +26,11 @@ fun Application.api(logg: Logg, gruppetilganger: Gruppetilganger, maskeringer: M
 
                 val principal = call.principal<JWTPrincipal>()
                 logg.info("requested er ${principal?.let { "authenticated: ${principal["name"]} (${principal["preferred_username"]})" } ?: "ikke autentisert"}")
-                val gruppemedlemskap = call.bearerToken?.let { gruppetilganger.hentGruppemedlemskap(it, logg) }
-
+                val claimsFraToken = listOfNotNull(principal?.get("preferred_username"))
+                val gruppemedlemskap = call.bearerToken?.let { gruppetilganger.hentGruppemedlemskap(it, logg) } ?: emptyList()
+                val claims = (claimsFraToken + gruppemedlemskap).takeUnless { it.isEmpty() }
                 try {
-                    maskeringer.visMaskertVerdi(logg, call, uuid, gruppemedlemskap)
+                    maskeringer.visMaskertVerdi(logg, call, uuid, claims)
                 } catch (err: Exception) {
                     logg.error("Ukjent feil oppstod: {}", err.message, err)
                     return@get call.respondText("Nå røyk vi på en smell her. Vi får håpe det er forbigående!", status = HttpStatusCode.InternalServerError)
@@ -39,7 +40,7 @@ fun Application.api(logg: Logg, gruppetilganger: Gruppetilganger, maskeringer: M
         post("/skjul_meg") {
             val request = call.receive<SkjulMegRequest>()
             val maskertVerdi = request.tilMaskertVerdi() ?: return@post call.respond(HttpStatusCode.BadRequest, ApiFeilmelding(
-                """Du må angi en gyldig json-kropp. Eksempel: { "url": "en-url", "påkrevdTilgang": "<en azure gruppe-ID>" } eller { "tekst": "en tekst" } """
+                """Du må angi en gyldig json-kropp. Eksempel: { "url": "en-url", "påkrevdTilgang": "<en azure gruppe-ID eller NAV-epost>" } eller { "tekst": "en tekst" } """
             ))
             val id = maskeringer.lagre(maskertVerdi)
             call.respond(SkjulMegRespons(id = id, url = call.url { path("/vis_meg/$id") }))
