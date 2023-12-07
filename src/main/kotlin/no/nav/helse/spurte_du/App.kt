@@ -102,6 +102,7 @@ fun launchApp(env: Map<String, String>, logg: Logg) {
                 val azureClient = AzureClient(
                     jwkProvider = JwkProviderBuilder(URL(env.getValue("AZURE_OPENID_CONFIG_JWKS_URI"))).build(),
                     issuer = env.getValue("AZURE_OPENID_CONFIG_ISSUER"),
+                    jedisPool = jedisPool,
                     httpClient = httpClient,
                     tokenEndpoint = env.getValue("AZURE_OPENID_CONFIG_TOKEN_ENDPOINT"),
                     clientId = env.getValue("AZURE_APP_CLIENT_ID"),

@@ -26,7 +26,7 @@ class Gruppetilganger(
     private fun bytteToken(logg: Logg, bearerToken: String): String? {
         // bytte access token mot et scopet for bruk mot graph api
         return try {
-            azureClient.veksleTilOnBehalfOf(bearerToken, "https://graph.microsoft.com/.default")
+            azureClient.veksleTilOnBehalfOf(logg, bearerToken, "https://graph.microsoft.com/.default")
         } catch (err: Exception) {
             logg.info("fikk problemer ved bytting av token")
             null
