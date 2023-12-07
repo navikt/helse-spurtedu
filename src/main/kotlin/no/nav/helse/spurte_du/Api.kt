@@ -79,7 +79,7 @@ fun Application.api(logg: Logg, gruppetilganger: Gruppetilganger, maskeringer: M
             call.respond(SkjulMegRespons(
                 id = id,
                 url = call.url {
-                    set("https")
+                    set("https", port = 443)
                     path(path)
                },
                 path = path
