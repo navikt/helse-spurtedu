@@ -96,7 +96,7 @@ sealed class MaskertVerdi {
         override suspend fun håndterRespons(call: ApplicationCall) {
             try {
                 val uri = URI(url)
-                check(uri.host == "nav.no")
+                check(uri.host.lowercase().endsWith("nav.no"))
                 call.respondRedirect(url, permanent = true)
             } catch (err: Exception) {
                 call.respondText(text = "URL er ikke gyldig, eller peker til en ikke-tillatt tjener: <$url>", status = HttpStatusCode.PreconditionFailed)
