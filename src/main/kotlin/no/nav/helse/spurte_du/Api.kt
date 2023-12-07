@@ -2,6 +2,7 @@ package no.nav.helse.spurte_du
 
 import io.ktor.http.*
 import io.ktor.server.application.*
+import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -9,7 +10,7 @@ import io.ktor.server.util.*
 import no.nav.helse.spurte_du.SpurteDuPrinsipal.Companion.logg
 import java.util.*
 
-fun Route.api(logg: Logg, maskeringer: Maskeringtjeneste, prinsipaler: Prinsipaltjeneste) {
+fun Route.api(logg: Logg, maskeringer: Maskeringtjeneste) {
     get("/vis_meg/{maskertId?}") {
         val id = call.parameters["maskertId"] ?: return@get call.respondText("Maksert id mangler fra url", status = HttpStatusCode.BadRequest)
         val uuid = try {
@@ -18,7 +19,7 @@ fun Route.api(logg: Logg, maskeringer: Maskeringtjeneste, prinsipaler: Prinsipal
             return@get call.respondText("Maksert id er jo ikke gyldig uuid", status = HttpStatusCode.BadRequest)
         }
 
-        val principal = prinsipaler.prinsipal(call)
+        val principal = call.principal<SpurteDuPrinsipal>()
         principal.logg(logg)
         try {
             maskeringer.visMaskertVerdi(logg, call, uuid, principal?.claims)
@@ -55,6 +56,10 @@ fun Route.api(logg: Logg, maskeringer: Maskeringtjeneste, prinsipaler: Prinsipal
                     <button type="submit">Send inn rakker'n</button>
                  </fieldset>
             </form>
+            <h2>API-bruk</h2>
+            
+            <p>Du kan sende en POST-request til samme url:</p>
+            <pre>curl -X POST -d '{ "url": "http://min-app.intern.nav.no/hemmelig", "påkrevdTilgang": "en gruppe" }' -H 'Content-type: application/json' /skjul_meg</pre>
            </body>
            </html>
         """, ContentType.Text.Html)

@@ -84,14 +84,17 @@ fun launchApp(env: Map<String, String>, logg: Logg) {
     val jedisPool = lagJedistilkobling(env, logg)
     val httpClient = HttpClient(ClientEngineCioCIO)
     val azureClient = AzureClient(
-        jwkProvider = JwkProviderBuilder(URI(env.getValue("AZURE_OPENID_CONFIG_JWKS_URI")).toURL()).build(),
-        issuer = env.getValue("AZURE_OPENID_CONFIG_ISSUER"),
         jedisPool = jedisPool,
         httpClient = httpClient,
         tokenEndpoint = env.getValue("AZURE_OPENID_CONFIG_TOKEN_ENDPOINT"),
         clientId = env.getValue("AZURE_APP_CLIENT_ID"),
         clientSecret = env.getValue("AZURE_APP_CLIENT_SECRET"),
         objectMapper = objectmapper
+    )
+    val azureApp = AzureApp(
+        jwkProvider = JwkProviderBuilder(URI(env.getValue("AZURE_OPENID_CONFIG_JWKS_URI")).toURL()).build(),
+        issuer = env.getValue("AZURE_OPENID_CONFIG_ISSUER"),
+        clientId = env.getValue("AZURE_APP_CLIENT_ID"),
     )
     val gruppetilganger = Gruppetilganger(jedisPool, azureClient, httpClient, objectmapper)
     val maskeringer = lagMaskeringer(jedisPool, objectmapper)
@@ -102,13 +105,16 @@ fun launchApp(env: Map<String, String>, logg: Logg) {
             connectors.add(EngineConnectorBuilder().apply {
                 this.port = 8080
             })
-            module { lagApplikasjonsmodul(logg, objectmapper, azureClient, gruppetilganger, maskeringer) }
+            module {
+                authentication { azureApp.konfigurerJwtAuth(logg, this, gruppetilganger) }
+                lagApplikasjonsmodul(logg, objectmapper, maskeringer)
+            }
         }
     )
     app.start(wait = true)
 }
 
-fun Application.lagApplikasjonsmodul(logg: Logg, objectMapper: ObjectMapper, azureClient: AzureClient, gruppetilganger: Gruppetilganger, maskeringer: Maskeringer) {
+fun Application.lagApplikasjonsmodul(logg: Logg, objectMapper: ObjectMapper, maskeringer: Maskeringtjeneste) {
     install(CallId) {
         header("callId")
         verify { it.isNotEmpty() }
@@ -127,38 +133,17 @@ fun Application.lagApplikasjonsmodul(logg: Logg, objectMapper: ObjectMapper, azu
     }
     requestResponseTracing(logg.nyLogg("no.nav.helse.spurte_du.api.Tracing"))
     nais()
-
-    authentication {
-        azureClient.konfigurerJwtAuth(this)
-    }
     routing {
         authenticate(optional = true) {
-            val prinsipaltjeneste = Prinsipaltjeneste { call ->
-                call.principal<JWTPrincipal>()?.let {
-                    val gruppemedlemskap = call.bearerToken?.let { token -> gruppetilganger.hentGruppemedlemskap(token, logg) } ?: emptyList()
-                    SpurteDuPrinsipal(it, gruppemedlemskap)
-                }
-            }
-
-            api(logg, maskeringer, prinsipaltjeneste)
+            api(logg, maskeringer)
         }
     }
-}
-
-private val ApplicationCall.bearerToken: String? get() {
-    val httpAuthHeader = request.parseAuthorizationHeader() ?: return null
-    if (httpAuthHeader !is HttpAuthHeader.Single) return null
-    return httpAuthHeader.blob
-}
-
-fun interface Prinsipaltjeneste {
-    fun prinsipal(call: ApplicationCall): SpurteDuPrinsipal?
 }
 
 class SpurteDuPrinsipal(
     private val jwtPrincipal: JWTPrincipal,
     private val gruppetilganger: List<String>
-) {
+) : Principal {
 
     val claims = (listOfNotNull(jwtPrincipal["preferred_username"]) + gruppetilganger).takeUnless(List<String>::isEmpty)
     companion object {

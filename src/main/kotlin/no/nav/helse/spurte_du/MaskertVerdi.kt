@@ -93,10 +93,13 @@ sealed class MaskertVerdi {
         override suspend fun håndterRespons(call: ApplicationCall) {
             try {
                 val uri = URI(url)
-                check(uri.host.lowercase().endsWith("nav.no"))
+                val tjenernavn = uri.host.lowercase()
+                check(tjenernavn.endsWith("nav.no")) {
+                    "tjeneren $tjenernavn er ikke tillatt"
+                }
                 call.respondRedirect(url, permanent = true)
             } catch (err: Exception) {
-                call.respondText(text = "URL er ikke gyldig, eller peker til en ikke-tillatt tjener: <$url>", status = HttpStatusCode.PreconditionFailed)
+                call.respondText(text = "URL er ikke gyldig, eller peker til en ikke-tillatt tjener: <$url>: ${err.message}", status = HttpStatusCode.PreconditionFailed)
             }
         }
 

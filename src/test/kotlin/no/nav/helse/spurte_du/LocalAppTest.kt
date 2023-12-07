@@ -4,14 +4,16 @@ import com.auth0.jwt.interfaces.Claim
 import com.auth0.jwt.interfaces.Payload
 import com.fasterxml.jackson.core.util.DefaultIndenter
 import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.ktor.server.application.*
+import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
-import io.ktor.server.routing.*
+import no.nav.helse.spurte_du.LokalBruker.Companion.håndterAutentisering
 import no.nav.helse.spurte_du.LokalBruker.Companion.somPrinsipal
 import org.slf4j.LoggerFactory
 import java.time.Instant
@@ -46,13 +48,25 @@ fun main() {
     )
 
     val logg = Logg(LoggerFactory.getLogger("åpenLogg"), LoggerFactory.getLogger("sikkerLogg"))
-    val maskeringer = LokaleMaskeringer(lokaleMaskeringer)
+    val objectMapper = jacksonObjectMapper()
+        .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+        .registerModule(JavaTimeModule())
+        .setDefaultPrettyPrinter(DefaultPrettyPrinter().apply {
+            indentArraysWith(DefaultPrettyPrinter.FixedSpaceIndenter.instance)
+            indentObjectsWith(DefaultIndenter("  ", "\n"))
+        })
+    val maskeringer = LokaleMaskeringer(lokaleMaskeringer, objectMapper)
     val prinsipaler = LokalePrinsipaler(logg, lokaleBrukere)
 
     embeddedServer(CIO, 8080, module = {
-        routing {
-            api(logg, maskeringer, prinsipaler)
+        authentication {
+            provider {
+                authenticate { context ->
+                    prinsipaler.håndterAutentisering(logg, context)
+                }
+            }
         }
+        lagApplikasjonsmodul(logg, objectMapper, maskeringer)
     }).start(wait = true)
 }
 
@@ -61,12 +75,19 @@ class LokalBruker(
     private val claims: Map<String, String>,
     private val grupper: List<String>
 ) {
+    private val jwtPrinsipal = JWTPrincipal(LokalePrinsipaler.LokalePayload(claims))
+
     private fun somPrinsipal() = SpurteDuPrinsipal(
-        jwtPrincipal = JWTPrincipal(LokalePrinsipaler.LokalePayload(claims)),
+        jwtPrincipal = jwtPrinsipal,
         gruppetilganger = grupper
     )
     companion object {
-        fun List<LokalBruker>.somPrinsipal(logg: Logg, bruker: String): SpurteDuPrinsipal? {
+        fun List<LokalBruker>.håndterAutentisering(context: AuthenticationContext, logg: Logg, bruker: String) {
+            val lokalBruker = somPrinsipal(logg, bruker) ?: return logg.info("logger ikke på fordi <bruker> er ikke satt i query string")
+            logg.info("setter en forfalsket principal i application-konteksten for: $bruker")
+            context.principal(lokalBruker)
+        }
+        private fun List<LokalBruker>.somPrinsipal(logg: Logg, bruker: String): SpurteDuPrinsipal? {
             val lokalBruker = firstOrNull { it.navn == bruker } ?: return null
             logg.info("logger på lokal bruker $bruker")
             return lokalBruker.somPrinsipal()
@@ -74,10 +95,10 @@ class LokalBruker(
     }
 }
 
-private class LokalePrinsipaler(private val logg: Logg, private val lokaleBrukere: List<LokalBruker>) : Prinsipaltjeneste {
-    override fun prinsipal(call: ApplicationCall): SpurteDuPrinsipal? {
-        val bruker = call.parameters["bruker"] ?: return null
-        return lokaleBrukere.somPrinsipal(logg, bruker)
+private class LokalePrinsipaler(private val logg: Logg, private val lokaleBrukere: List<LokalBruker>) {
+    fun håndterAutentisering(logg: Logg, context: AuthenticationContext) {
+        val bruker = context.call.parameters["bruker"] ?: return
+        lokaleBrukere.håndterAutentisering(context, logg, bruker)
     }
 
     class LokalePayload(claims: Map<String, String>) : Payload {
@@ -137,15 +158,8 @@ private class LokalePrinsipaler(private val logg: Logg, private val lokaleBruker
     }
 }
 
-private class LokaleMaskeringer(lokaleMaskeringer: List<MaskertVerdi>) : Maskeringtjeneste {
+private class LokaleMaskeringer(lokaleMaskeringer: List<MaskertVerdi>, private val objectMapper: ObjectMapper) : Maskeringtjeneste {
     private val maskeringer = mutableMapOf<UUID, String>()
-    private val objectMapper = jacksonObjectMapper()
-        .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-        .registerModule(JavaTimeModule())
-        .setDefaultPrettyPrinter(DefaultPrettyPrinter().apply {
-            indentArraysWith(DefaultPrettyPrinter.FixedSpaceIndenter.instance)
-            indentObjectsWith(DefaultIndenter("  ", "\n"))
-        })
 
     init {
         lokaleMaskeringer.forEach { it.lagre(this, objectMapper) }

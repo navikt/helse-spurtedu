@@ -1,22 +1,17 @@
 package no.nav.helse.spurte_du
 
-import com.auth0.jwk.JwkProvider
 import com.fasterxml.jackson.databind.ObjectMapper
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.request.forms.*
 import io.ktor.client.statement.*
 import io.ktor.http.*
-import io.ktor.server.auth.*
-import io.ktor.server.auth.jwt.*
 import kotlinx.coroutines.runBlocking
 import redis.clients.jedis.JedisPool
 import redis.clients.jedis.params.SetParams
 import java.security.MessageDigest
 
 class AzureClient(
-    private val jwkProvider: JwkProvider,
-    private val issuer: String,
     private val jedisPool: JedisPool,
     private val httpClient: HttpClient,
     private val tokenEndpoint: String,
@@ -68,17 +63,6 @@ class AzureClient(
         val md = MessageDigest.getInstance("SHA-256")
         val digest = md.digest(nøkkel)
         return digest.toHexString()
-    }
-
-    fun konfigurerJwtAuth(config: AuthenticationConfig) {
-        config.jwt {
-            verifier(jwkProvider, issuer) {
-                withAudience(clientId)
-                withClaimPresence("preferred_username")
-                withClaimPresence("name")
-            }
-            validate { credentials -> JWTPrincipal(credentials.payload) }
-        }
     }
 
     private companion object {
