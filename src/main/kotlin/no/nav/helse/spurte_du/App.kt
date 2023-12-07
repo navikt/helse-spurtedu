@@ -30,6 +30,7 @@ import io.micrometer.prometheus.PrometheusMeterRegistry
 import io.prometheus.client.CollectorRegistry
 import io.prometheus.client.exporter.common.TextFormat
 import net.logstash.logback.argument.StructuredArguments.keyValue
+import no.nav.helse.spurte_du.Maskeringer.Companion.lagMaskeringer
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.slf4j.event.Level
@@ -82,7 +83,7 @@ fun launchApp(env: Map<String, String>, logg: Logg) {
                 install(ContentNegotiation) { register(ContentType.Application.Json, JacksonConverter(objectmapper)) }
                 requestResponseTracing(logg.nyLogg("no.nav.helse.spurte_du.api.Tracing"))
                 nais()
-                api(env, logg, objectmapper)
+                api(env, logg, objectmapper, lagMaskeringer(env, objectmapper, logg))
             }
         }
     )
