@@ -37,9 +37,41 @@ fun Application.api(logg: Logg, gruppetilganger: Gruppetilganger, maskeringer: M
                 }
             }
         }
+        get("/skjul_meg") {
+            call.respondText("""<!doctype html>
+                <head>
+                    <meta charset="utf-8" />
+                    <title>Skjul meg!</title>
+                </head>
+               <body>
+                <h1>Skjul meg</h1>
+                <form action="/skjul_meg" method="post">
+                    <fieldset>
+                        <legend>Url</legend>
+                        <input type="text" name="url" />
+                     </fieldset>
+                    <fieldset>
+                        <legend>Tekst</legend>
+                        <input type="text" name="tekst" />
+                     </fieldset>
+                    <fieldset>
+                        <legend>Påkrevd tilgang</legend>
+                        <input type="text" name="påkrevdTilgang" />
+                        <p>
+                            Kan enten være en Azure AD-gruppeID eller en Nav-epost.
+                        </p>
+                     </fieldset>
+                     <fieldset>
+                        <button type="submit">Send inn rakker'n</button>
+                     </fieldset>
+                </form>
+               </body>
+               </html>
+            """.trimIndent())
+        }
         post("/skjul_meg") {
-            val request = call.receive<SkjulMegRequest>()
-            val maskertVerdi = request.tilMaskertVerdi() ?: return@post call.respond(HttpStatusCode.BadRequest, ApiFeilmelding(
+            val request = call.receiveNullable<SkjulMegRequest>()
+            val maskertVerdi = request?.tilMaskertVerdi() ?: return@post call.respond(HttpStatusCode.BadRequest, ApiFeilmelding(
                 """Du må angi en gyldig json-kropp. Eksempel: { "url": "en-url", "påkrevdTilgang": "<en azure gruppe-ID eller NAV-epost>" } eller { "tekst": "en tekst" } """
             ))
             val id = maskeringer.lagre(maskertVerdi)
@@ -70,8 +102,8 @@ data class SkjulMegRequest(
     val påkrevdTilgang: String?
 ) {
     fun tilMaskertVerdi() = when {
-        url != null -> MaskertVerdi.Url(UUID.randomUUID(), url, påkrevdTilgang)
-        tekst != null -> MaskertVerdi.Tekst(UUID.randomUUID(), tekst, påkrevdTilgang)
+        url?.takeUnless { it.isBlank() } != null -> MaskertVerdi.Url(UUID.randomUUID(), url, påkrevdTilgang)
+        tekst?.takeUnless { it.isBlank() } != null -> MaskertVerdi.Tekst(UUID.randomUUID(), tekst, påkrevdTilgang)
         else -> null
     }
 }

@@ -9,6 +9,7 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.ktor.client.*
 import io.ktor.http.*
 import io.ktor.http.content.*
+import io.ktor.serialization.*
 import io.ktor.serialization.jackson.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -23,6 +24,10 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.util.*
 import io.ktor.util.*
+import io.ktor.util.reflect.*
+import io.ktor.utils.io.*
+import io.ktor.utils.io.charsets.*
+import io.ktor.utils.io.jvm.javaio.*
 import io.micrometer.core.instrument.binder.jvm.ClassLoaderMetrics
 import io.micrometer.core.instrument.binder.jvm.JvmGcMetrics
 import io.micrometer.core.instrument.binder.jvm.JvmMemoryMetrics
@@ -33,6 +38,8 @@ import io.micrometer.prometheus.PrometheusConfig
 import io.micrometer.prometheus.PrometheusMeterRegistry
 import io.prometheus.client.CollectorRegistry
 import io.prometheus.client.exporter.common.TextFormat
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import net.logstash.logback.argument.StructuredArguments.keyValue
 import no.nav.helse.spurte_du.Maskeringer.Companion.lagMaskeringer
 import org.slf4j.Logger
@@ -45,6 +52,8 @@ import redis.clients.jedis.JedisPoolConfig
 import java.io.CharArrayWriter
 import java.net.URI
 import java.net.URL
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 import java.time.Duration
 import java.util.*
 import io.ktor.client.engine.cio.CIO as ClientEngineCioCIO
@@ -92,7 +101,30 @@ fun launchApp(env: Map<String, String>, logg: Logg) {
                     disableDefaultColors()
                     filter { call -> call.request.path().startsWith("/api/") }
                 }
-                install(ContentNegotiation) { register(ContentType.Application.Json, JacksonConverter(objectmapper)) }
+                install(ContentNegotiation) {
+                    register(ContentType.Application.Json, JacksonConverter(objectmapper))
+                    register(ContentType.Application.FormUrlEncoded, object : ContentConverter {
+                        override suspend fun deserialize(
+                            charset: Charset,
+                            typeInfo: TypeInfo,
+                            content: ByteReadChannel
+                        ): Any? {
+                            return withContext(Dispatchers.IO) {
+                                val reader = content
+                                    .toInputStream()
+                                    .reader(charset)
+                                    .readText()
+                                    .let { URLDecoder.decode(it, charset) }
+                                    .split("&")
+                                    .associate { verdi ->
+                                        val (key, value) = verdi.split("=", limit = 2)
+                                        key to value
+                                    }
+                                objectmapper.convertValue(reader, objectmapper.constructType(typeInfo.reifiedType))
+                            }
+                        }
+                    })
+                }
                 requestResponseTracing(logg.nyLogg("no.nav.helse.spurte_du.api.Tracing"))
                 nais()
 
