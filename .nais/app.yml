@@ -21,6 +21,7 @@ spec:
     inbound:
       rules:
         - application: spammer
+        - application: spaghet
   azure:
     sidecar:
       enabled: true
