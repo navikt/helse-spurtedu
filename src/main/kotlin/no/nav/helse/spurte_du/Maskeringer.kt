@@ -10,6 +10,7 @@ import java.util.*
 
 interface Maskeringtjeneste {
     suspend fun visMaskertVerdi(logg: Logg, call: ApplicationCall, id: UUID, tilganger: List<String>?)
+    suspend fun visMetadata(logg: Logg, call: ApplicationCall, id: UUID, tilganger: List<String>?)
     fun lagre(maskertVerdi: MaskertVerdi): UUID
     fun lagre(id: UUID, data: String): UUID
 }
@@ -20,16 +21,31 @@ class Maskeringer(
 ) : Maskeringtjeneste {
 
     override suspend fun visMaskertVerdi(logg: Logg, call: ApplicationCall, id: UUID, tilganger: List<String>?) {
+        val verdi = hentMaskertVerdi(call, logg, id) ?: return
+        verdi.låsOpp(tilganger, call, logg)
+    }
+
+    override suspend fun visMetadata(logg: Logg, call: ApplicationCall, id: UUID, tilganger: List<String>?) {
+        val verdi = hentMaskertVerdi(call, logg, id) ?: return
+        verdi.visMetadata(tilganger, call, logg)
+    }
+
+    private suspend fun hentMaskertVerdi(call: ApplicationCall, logg: Logg, id: UUID): MaskertVerdi? {
         try {
             jedisPool.resource.use { jedis ->
-                val maskertVerdi = jedis.hget(maskerteVerdier, "$id") ?: return call.`404`(logg, "Finner ikke verdi i Redis")
-                val verdi = MaskertVerdi.fraJson(objectMapper, maskertVerdi, logg) ?: return call.`404`(logg, "Kan ikke deserialisere verdi fra Redis")
-
-                verdi.låsOpp(tilganger, call, logg)
+                val maskertVerdi = jedis.hget(maskerteVerdier, "$id")
+                if (maskertVerdi == null) {
+                    call.`404`(logg, "Finner ikke verdi i Redis")
+                    return null
+                }
+                val verdi = MaskertVerdi.fraJson(objectMapper, maskertVerdi, logg)
+                if (verdi == null) call.`404`(logg, "Kan ikke deserialisere verdi fra Redis")
+                return verdi
             }
         } catch (err: JedisException) {
             logg.error("Feil ved tilkobling til Redis: {}", err.message, err)
             call.respondText("Nå røyk vi på en smell her. Vi får håpe det er forbigående!", status = HttpStatusCode.InternalServerError)
+            return null
         }
     }
 

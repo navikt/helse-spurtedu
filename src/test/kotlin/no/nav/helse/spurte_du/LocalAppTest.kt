@@ -171,6 +171,12 @@ private class LokaleMaskeringer(lokaleMaskeringer: List<MaskertVerdi>, private v
         maskertVerdi.låsOpp(tilganger, call, logg)
     }
 
+    override suspend fun visMetadata(logg: Logg, call: ApplicationCall, id: UUID, tilganger: List<String>?) {
+        val data = maskeringer[id] ?: return call.`404`(logg, "Fant ikke $id i lokale maskeringer")
+        val maskertVerdi = MaskertVerdi.fraJson(objectMapper, data, logg) ?: return call.`404`(logg, "Kan ikke deserialisere lokal maskert verdi")
+        maskertVerdi.visMetadata(tilganger, call, logg)
+    }
+
     override fun lagre(id: UUID, data: String): UUID {
         maskeringer[id] = data
         return id

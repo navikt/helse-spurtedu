@@ -9,23 +9,27 @@ import io.ktor.server.routing.*
 import io.ktor.server.util.*
 import no.nav.helse.spurte_du.SpurteDuPrinsipal.Companion.logg
 import java.util.*
+import kotlin.math.log
 
 fun Route.api(logg: Logg, maskeringer: Maskeringtjeneste) {
-    get("/vis_meg/{maskertId?}") {
-        val id = call.parameters["maskertId"] ?: return@get call.respondText("Maksert id mangler fra url", status = HttpStatusCode.BadRequest)
-        val uuid = try {
-            UUID.fromString(id)
-        } catch (err: IllegalArgumentException) {
-            return@get call.respondText("Maksert id er jo ikke gyldig uuid", status = HttpStatusCode.BadRequest)
+    route("/vis_meg") {
+        get("{maskertId?}") {
+            val (uuid, principal) = call.håndterVisMeg(logg) ?: return@get
+            try {
+                maskeringer.visMaskertVerdi(logg, call, uuid, principal?.claims)
+            } catch (err: Exception) {
+                logg.error("Ukjent feil oppstod: {}", err.message, err)
+                return@get call.respondText("Nå røyk vi på en smell her. Vi får håpe det er forbigående!", status = HttpStatusCode.InternalServerError)
+            }
         }
-
-        val principal = call.principal<SpurteDuPrinsipal>()
-        principal.logg(logg)
-        try {
-            maskeringer.visMaskertVerdi(logg, call, uuid, principal?.claims)
-        } catch (err: Exception) {
-            logg.error("Ukjent feil oppstod: {}", err.message, err)
-            return@get call.respondText("Nå røyk vi på en smell her. Vi får håpe det er forbigående!", status = HttpStatusCode.InternalServerError)
+        get("{maskertId}/metadata") {
+            val (uuid, principal) = call.håndterVisMeg(logg) ?: return@get
+            try {
+                maskeringer.visMetadata(logg, call, uuid, principal?.claims)
+            } catch (err: Exception) {
+                logg.error("Ukjent feil oppstod: {}", err.message, err)
+                return@get call.respondText("Nå røyk vi på en smell her. Vi får håpe det er forbigående!", status = HttpStatusCode.InternalServerError)
+            }
         }
     }
     get("/skjul_meg") {
@@ -80,6 +84,24 @@ fun Route.api(logg: Logg, maskeringer: Maskeringtjeneste) {
             path = path
         ))
     }
+}
+
+private suspend fun ApplicationCall.håndterVisMeg(logg: Logg): Pair<UUID, SpurteDuPrinsipal?>? {
+    val id = parameters["maskertId"]
+    if (id == null) {
+        respondText("Maksert id mangler fra url", status = HttpStatusCode.BadRequest)
+        return null
+    }
+    val uuid = try {
+        UUID.fromString(id)
+    } catch (err: IllegalArgumentException) {
+        respondText("Maksert id er jo ikke gyldig uuid", status = HttpStatusCode.BadRequest)
+        return null
+    }
+
+    val principal = principal<SpurteDuPrinsipal>()
+    principal.logg(logg)
+    return uuid to principal
 }
 
 data class ApiFeilmelding(
