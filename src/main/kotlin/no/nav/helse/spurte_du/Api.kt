@@ -74,7 +74,7 @@ fun Route.api(logg: Logg, maskeringer: Maskeringtjeneste) {
             <p>Responsen inneholder felt for ID-en til den skjulte verdien, en absolutt-URL til visning, og path til visning</p>
             <pre>
 {
-    "id": "<en uuid>",
+    "id": "&lt;en uuid&gt;",
     "url": "https://spurte-du.intern.nav.no/vis_meg/&lt;uuid-en&gt;",
     "path": "/vis_meg/&lt;uuid-en&gt;"
 }
