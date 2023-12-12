@@ -1,3 +1,5 @@
+import org.gradle.kotlin.dsl.support.kotlinCompilerOptions
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
@@ -49,15 +51,16 @@ dependencies {
     testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junitJupiterVersion")
 }
 
+kotlin {
+    compilerOptions {
+        compilerOptions.jvmTarget.set(JvmTarget.JVM_21)
+    }
+}
+java {
+    targetCompatibility = JavaVersion.VERSION_21
+}
+
 tasks {
-    withType<KotlinCompile> {
-        kotlinOptions.jvmTarget = "21"
-    }
-
-    named<KotlinCompile>("compileTestKotlin") {
-        kotlinOptions.jvmTarget = "21"
-    }
-
     withType<Jar> {
         archiveBaseName.set("app")
 
