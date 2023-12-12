@@ -61,9 +61,24 @@ fun Route.api(logg: Logg, maskeringer: Maskeringtjeneste) {
                  </fieldset>
             </form>
             <h2>API-bruk</h2>
-            
-            <p>Du kan sende en POST-request til samme url:</p>
+            <p>Om <code>påkrevdTilgang</code> utelates vil verdien være åpen for alle</p>   
+            <p><code>påkrevdTilgang</code> kan være en Azure AD-gruppe ID eller en NAV epost-adresse (f.eks. om du vil sende til én mottaker)</p>   
+            <h3>Skjule url</h3>
             <pre>curl -X POST -d '{ "url": "http://min-app.intern.nav.no/hemmelig", "påkrevdTilgang": "en gruppe" }' -H 'Content-type: application/json' /skjul_meg</pre>
+            <pre>curl -X POST -d '{ "url": "http://min-app.intern.nav.no/hemmelig", "påkrevdTilgang": "en-epost-adresse@nav.no" }' -H 'Content-type: application/json' /skjul_meg</pre>
+           
+            <h3>Skjule tekst</h3>
+            <pre>curl -X POST -d '{ "tekst": "Superhemmelig melding", "påkrevdTilgang": "en gruppe" }' -H 'Content-type: application/json' /skjul_meg</pre>
+            
+            <h3>Respons</h3>
+            <p>Responsen inneholder felt for ID-en til den skjulte verdien, en absolutt-URL til visning, og path til visning</p>
+            <pre>
+{
+    "id": "<en uuid>",
+    "url": "https://spurte-du.intern.nav.no/vis_meg/&lt;uuid-en&gt;",
+    "path": "/vis_meg/&lt;uuid-en&gt;"
+}
+            </pre>
            </body>
            </html>
         """, ContentType.Text.Html)
