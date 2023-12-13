@@ -14,7 +14,6 @@ import io.ktor.server.auth.jwt.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
 import no.nav.helse.spurte_du.LokalBruker.Companion.håndterAutentisering
-import no.nav.helse.spurte_du.LokalBruker.Companion.somPrinsipal
 import org.slf4j.LoggerFactory
 import java.time.Instant
 import java.util.*
@@ -183,6 +182,6 @@ private class LokaleMaskeringer(lokaleMaskeringer: List<MaskertVerdi>, private v
     }
 
     override fun lagre(maskertVerdi: MaskertVerdi): UUID {
-        return maskertVerdi.lagre(this, jacksonObjectMapper())
+        return maskertVerdi.lagre(this, objectMapper)
     }
 }
