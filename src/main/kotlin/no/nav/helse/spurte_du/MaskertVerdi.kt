@@ -6,7 +6,6 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
-import org.intellij.lang.annotations.Language
 import java.net.URI
 import java.time.Instant
 import java.time.ZoneId
@@ -99,12 +98,10 @@ sealed class MaskertVerdi {
         override val data = mapOf("tekst" to tekst)
         override fun json(objectMapper: ObjectMapper) = json(objectMapper, Teksttype)
         override suspend fun håndterRespons(call: ApplicationCall) {
-            @Language("JSON")
-            val responseBody = """{ 
-  "text": "$tekst"
-}"""
-            call.respondText(responseBody, ContentType.Application.Json)
+            call.respond(Response(tekst))
         }
+
+        private data class Response(val text: String)
 
         companion object {
             private const val Teksttype = "tekst"
