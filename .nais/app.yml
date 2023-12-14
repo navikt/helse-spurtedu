@@ -23,6 +23,7 @@ spec:
         - application: spammer
         - application: spaghet
         - application: spleis-api
+        - application: spanner
   azure:
     sidecar:
       enabled: true
