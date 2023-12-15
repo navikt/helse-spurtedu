@@ -24,7 +24,7 @@ spec:
         - application: spaghet
         - application: spleis-api
         - application: spanner
-        - application: sparsom
+        - application: sparsom-api
   azure:
     sidecar:
       enabled: true
