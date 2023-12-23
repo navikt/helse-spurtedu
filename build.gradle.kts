@@ -1,6 +1,4 @@
-import org.gradle.kotlin.dsl.support.kotlinCompilerOptions
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version "1.9.21"
@@ -61,6 +59,20 @@ java {
 }
 
 tasks {
+    processResources {
+        doLast {
+            exec {
+                executable = "npm"
+                args = listOf("install")
+                workingDir = File("frontend")
+            }
+            exec {
+                executable = "npm"
+                args = listOf("run", "build")
+                workingDir = File("frontend")
+            }
+        }
+    }
     withType<Jar> {
         archiveBaseName.set("app")
 

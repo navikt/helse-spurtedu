@@ -18,6 +18,7 @@ import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
+import io.ktor.server.http.content.*
 import io.ktor.server.metrics.micrometer.*
 import io.ktor.server.plugins.callid.*
 import io.ktor.server.plugins.callloging.*
@@ -134,10 +135,15 @@ fun Application.lagApplikasjonsmodul(logg: Logg, objectMapper: ObjectMapper, mas
     requestResponseTracing(logg.nyLogg("no.nav.helse.spurte_du.api.Tracing"))
     nais()
     routing {
+        frontend()
         authenticate(optional = true) {
             api(logg, maskeringer)
         }
     }
+}
+
+private fun Route.frontend() {
+    staticResources("/", "/public/")
 }
 
 class SpurteDuPrinsipal(

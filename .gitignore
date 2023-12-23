@@ -6,6 +6,8 @@ target
 # Ignore Gradle GUI config
 gradle-app.setting
 
+node_modules
+
 # Cache of project
 .gradletasknamecache
 
