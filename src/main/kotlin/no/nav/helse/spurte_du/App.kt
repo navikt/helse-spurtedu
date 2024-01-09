@@ -7,6 +7,8 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.databind.SerializationFeature
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.github.navikt.tbd_libs.azure.AzureAuthMethod
+import com.github.navikt.tbd_libs.azure.AzureTokenClient
 import io.ktor.client.*
 import io.ktor.http.*
 import io.ktor.http.auth.*
@@ -84,13 +86,15 @@ fun main() {
 fun launchApp(env: Map<String, String>, logg: Logg) {
     val jedisPool = lagJedistilkobling(env, logg)
     val httpClient = HttpClient(ClientEngineCioCIO)
-    val azureClient = AzureClient(
+    val azureClient = JedisTokenCache(
         jedisPool = jedisPool,
-        httpClient = httpClient,
-        tokenEndpoint = env.getValue("AZURE_OPENID_CONFIG_TOKEN_ENDPOINT"),
-        clientId = env.getValue("AZURE_APP_CLIENT_ID"),
-        clientSecret = env.getValue("AZURE_APP_CLIENT_SECRET"),
-        objectMapper = objectmapper
+        other = AzureTokenClient(
+            tokenEndpoint = URI(env.getValue("AZURE_OPENID_CONFIG_TOKEN_ENDPOINT")),
+            clientId = env.getValue("AZURE_APP_CLIENT_ID"),
+            authMethod = AzureAuthMethod.Secret(env.getValue("AZURE_APP_CLIENT_SECRET")),
+            objectMapper = objectmapper
+        ),
+        logg = logg
     )
     val azureApp = AzureApp(
         jwkProvider = JwkProviderBuilder(URI(env.getValue("AZURE_OPENID_CONFIG_JWKS_URI")).toURL()).build(),

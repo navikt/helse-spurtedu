@@ -15,9 +15,11 @@ val junitJupiterVersion = "5.10.1"
 val jacksonVersion = "2.16.0"
 val logbackClassicVersion = "1.4.14"
 val logbackEncoderVersion = "7.4"
+val tbdLibsVersion = "2024.01.09-10.01-864ddafa"
 
 repositories {
     mavenCentral()
+    maven("https://github-package-registry-mirror.gc.nav.no/cached/maven-release")
     maven("https://jitpack.io")
 }
 
@@ -34,6 +36,8 @@ dependencies {
     api("io.ktor:ktor-server-auth-jwt:$ktorVersion") {
         exclude(group = "junit")
     }
+
+    api("com.github.navikt.tbd-libs:azure-token-client:$tbdLibsVersion")
 
     api("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
     api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion")

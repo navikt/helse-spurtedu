@@ -2,6 +2,7 @@ package no.nav.helse.spurte_du
 
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import com.github.navikt.tbd_libs.azure.AzureTokenProvider
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -18,7 +19,7 @@ interface Gruppetilgangtjeneste {
 
 class Gruppetilganger(
     private val jedisPool: JedisPool,
-    private val azureClient: AzureClient,
+    private val azureClient: AzureTokenProvider,
     private val httpClient: HttpClient,
     private val objectMapper: ObjectMapper
 ) : Gruppetilgangtjeneste {
@@ -68,7 +69,7 @@ class Gruppetilganger(
     private fun bytteToken(logg: Logg, bearerToken: String): String? {
         // bytte access token mot et scopet for bruk mot graph api
         return try {
-            azureClient.veksleTilOnBehalfOf(logg, bearerToken, "https://graph.microsoft.com/.default")
+            azureClient.onBehalfOfToken("https://graph.microsoft.com/.default", bearerToken).token
         } catch (err: Exception) {
             logg.info("fikk problemer ved bytting av token")
             null
