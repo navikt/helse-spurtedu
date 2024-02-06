@@ -15,7 +15,7 @@ import java.util.*
 sealed class MaskertVerdi {
     companion object {
         fun fraJson(objectMapper: ObjectMapper, json: String, logg: Logg): MaskertVerdi? {
-            val implementasjoner: List<(UUID, String, ZonedDateTime, String?, JsonNode) -> MaskertVerdi?> = listOf(
+            val implementasjoner: List<(UUID, String, ZonedDateTime, List<String>, JsonNode) -> MaskertVerdi?> = listOf(
                 MaskertVerdi.Tekst::fraJson,
                 MaskertVerdi.Url::fraJson
             )
@@ -25,13 +25,13 @@ sealed class MaskertVerdi {
                 if (!node.hasNonNull("id")) return null
                 val id = UUID.fromString(node.path("id").asText())
                 val type = node.path("type").takeIf(JsonNode::isTextual)?.asText() ?: return null
-                val påkrevdTilgang = node.path("påkrevdTilgang").takeIf(JsonNode::isTextual)?.asText()
+                val påkrevdTilganger = node.path("påkrevdTilgang").asText().split(',').map(String::trim)
                 val opprettet = node.path("opprettet")
                     .takeIf(JsonNode::isTextual)?.asText()
                     ?.let { ZonedDateTime.parse(it) }
                     ?: ZonedDateTime.ofInstant(Instant.EPOCH, ZoneId.systemDefault())
                 return implementasjoner.firstNotNullOfOrNull { deserialiser ->
-                    deserialiser(id, type, opprettet, påkrevdTilgang, node.path("data"))
+                    deserialiser(id, type, opprettet, påkrevdTilganger, node.path("data"))
                 }
             } catch (err: JsonParseException) {
                 null
@@ -45,7 +45,7 @@ sealed class MaskertVerdi {
     protected abstract val id: UUID
     protected abstract val data: Map<String, String>
     protected open val opprettet: ZonedDateTime = ZonedDateTime.now()
-    protected open val påkrevdTilgang: String? = null
+    protected open val påkrevdTilganger: List<String> = emptyList()
 
     suspend fun låsOpp(tilganger: List<String>?, call: ApplicationCall, logg: Logg) {
         if (!vurderTilgang(call, logg, tilganger)) return
@@ -60,12 +60,12 @@ sealed class MaskertVerdi {
     }
 
     private suspend fun vurderTilgang(call: ApplicationCall, logg: Logg, tilganger: List<String>?): Boolean {
-        if (påkrevdTilgang == null) return true
+        if (påkrevdTilganger.isEmpty()) return true
         if (tilganger == null) {
             call.respondRedirect(url = "/oauth2/login?redirect=/vis_meg/$id", permanent = false)
             return false
         }
-        if (påkrevdTilgang?.lowercase() !in tilganger.map(String::lowercase)) {
+        if (påkrevdTilganger.none { it.lowercase() !in tilganger.map(String::lowercase) }) {
             call.`404`(logg, "Uautorisert tilgang kan ikke innfris. Pålogget bruker har ${tilganger.joinToString()}")
             return false
         }
@@ -84,7 +84,7 @@ sealed class MaskertVerdi {
             "id" to id,
             "type" to type,
             "opprettet" to opprettet,
-            "påkrevdTilgang" to påkrevdTilgang,
+            "påkrevdTilgang" to påkrevdTilganger,
             "data" to data
         )
     )
@@ -92,7 +92,7 @@ sealed class MaskertVerdi {
     class Tekst(
         override val id: UUID,
         private val tekst: String,
-        override val påkrevdTilgang: String? = null,
+        override val påkrevdTilganger: List<String> = emptyList(),
         override val opprettet: ZonedDateTime = ZonedDateTime.now()
     ) : MaskertVerdi() {
         override val data = mapOf("tekst" to tekst)
@@ -105,7 +105,7 @@ sealed class MaskertVerdi {
 
         companion object {
             private const val Teksttype = "tekst"
-            fun fraJson(id: UUID, type: String, opprettet: ZonedDateTime, påkrevdTilgang: String?, data: JsonNode): Tekst? {
+            fun fraJson(id: UUID, type: String, opprettet: ZonedDateTime, påkrevdTilgang: List<String>, data: JsonNode): Tekst? {
                 if (type != Teksttype) return null
                 return Tekst(id, data.path("tekst").asText(), påkrevdTilgang, opprettet)
             }
@@ -115,7 +115,7 @@ sealed class MaskertVerdi {
     class Url(
         override val id: UUID,
         private val url: String,
-        override val påkrevdTilgang: String? = null,
+        override val påkrevdTilganger: List<String> = emptyList(),
         override val opprettet: ZonedDateTime = ZonedDateTime.now()
     ) : MaskertVerdi() {
         override val data = mapOf("url" to url)
@@ -135,7 +135,7 @@ sealed class MaskertVerdi {
 
         companion object {
             private const val Urltype = "url"
-            fun fraJson(id: UUID, type: String, opprettet: ZonedDateTime, påkrevdTilgang: String?, data: JsonNode): Url? {
+            fun fraJson(id: UUID, type: String, opprettet: ZonedDateTime, påkrevdTilgang: List<String>, data: JsonNode): Url? {
                 if (type != Urltype) return null
                 return Url(id, data.path("url").asText(), påkrevdTilgang, opprettet)
             }

@@ -9,7 +9,6 @@ import io.ktor.server.routing.*
 import io.ktor.server.util.*
 import no.nav.helse.spurte_du.SpurteDuPrinsipal.Companion.logg
 import java.util.*
-import kotlin.math.log
 
 fun Route.api(logg: Logg, maskeringer: Maskeringtjeneste) {
     route("/vis_meg") {
@@ -133,10 +132,10 @@ data class SkjulMegRequest(
     val påkrevdTilgang: String?
 ) {
     fun tilMaskertVerdi(): MaskertVerdi? {
-        val tilgang = påkrevdTilgang.takeUnless { it.isNullOrBlank() }
+        val tilganger = påkrevdTilgang?.split(',')?.map(String::trim) ?: emptyList()
         return when {
-            url?.takeUnless { it.isBlank() } != null -> MaskertVerdi.Url(UUID.randomUUID(), url, tilgang)
-            tekst?.takeUnless { it.isBlank() } != null -> MaskertVerdi.Tekst(UUID.randomUUID(), tekst, tilgang)
+            url?.takeUnless { it.isBlank() } != null -> MaskertVerdi.Url(UUID.randomUUID(), url, tilganger)
+            tekst?.takeUnless { it.isBlank() } != null -> MaskertVerdi.Tekst(UUID.randomUUID(), tekst, tilganger)
             else -> null
         }
     }

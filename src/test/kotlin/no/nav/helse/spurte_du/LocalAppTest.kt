@@ -42,8 +42,8 @@ fun main() {
     )
     val lokaleMaskeringer = listOf(
         MaskertVerdi.Tekst(UUID.fromString("1575977c-9b3b-4703-ac6a-7db5e14cd9df"), "Hei, Verden"),
-        MaskertVerdi.Tekst(UUID.fromString("ec0d49ab-b42a-4626-a7de-3951d9ed5038"), "Hei, Gruppe1", "gruppe1"),
-        MaskertVerdi.Tekst(UUID.fromString("06299de5-b51a-4ff1-a83b-7f3db621791a"), "Hei, Bømlo!", "bomlo@nav.no"),
+        MaskertVerdi.Tekst(UUID.fromString("ec0d49ab-b42a-4626-a7de-3951d9ed5038"), "Hei, Gruppe1", listOf("gruppe1")),
+        MaskertVerdi.Tekst(UUID.fromString("06299de5-b51a-4ff1-a83b-7f3db621791a"), "Hei, Bømlo!", listOf("bomlo@nav.no")),
     )
 
     val logg = Logg(LoggerFactory.getLogger("åpenLogg"), LoggerFactory.getLogger("sikkerLogg"))
