@@ -10,7 +10,7 @@ group = "no.nav.helse"
 version = properties["version"] ?: "local-build"
 
 val ktorVersion = "2.3.6"
-val micrometerRegistryPrometheusVersion = "1.12.0"
+val micrometerRegistryPrometheusVersion = "1.12.3"
 val junitJupiterVersion = "5.10.2"
 val jacksonVersion = "2.16.0"
 val logbackClassicVersion = "1.4.14"
