@@ -29,6 +29,7 @@ spec:
         - application: spleis-api
         - application: spanner
         - application: sparsom-api
+        - application: spoiler
   azure:
     sidecar:
       enabled: true
