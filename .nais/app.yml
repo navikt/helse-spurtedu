@@ -16,7 +16,9 @@ spec:
   secureLogs:
     enabled: true
   ingresses:
-    - {{ingress}}
+  {{# each ingress as |i| }}
+    - {{i}}
+  {{/each}}
   accessPolicy:
     inbound:
       rules:
