@@ -226,7 +226,7 @@ private fun Application.requestResponseTracing(logger: Logger) {
             logger.info("incoming callId=${call.callId} method=${call.request.httpMethod.value} uri=${call.request.uri}", *headers)
             proceed()
         } catch (err: Throwable) {
-            logger.error("exception thrown during processing: ${err.message} callId=${call.callId}")
+            logger.error("exception thrown during processing: ${err.message} callId=${call.callId}", err)
             throw err
         }
     }
