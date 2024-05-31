@@ -15,13 +15,19 @@ class AzureApp(
         config.jwt {
             verifier(jwkProvider, issuer) {
                 withAudience(clientId)
-                withClaimPresence("preferred_username")
-                withClaimPresence("name")
             }
             validate { credentials ->
-                // TODO: må få tak i bearer token på en annen måte vel? hvorfor får vi det ikke fra validate{} !?
-                val gruppemedlemskap = bearerToken?.let { token -> gruppetilganger.hentGruppemedlemskap(token, logg) } ?: emptyList()
-                SpurteDuPrinsipal(JWTPrincipal(credentials.payload), gruppemedlemskap)
+                val jwt = JWTPrincipal(credentials.payload)
+                val claims = credentials.payload.claims
+                when {
+                    claims.containsKey("azp_name") -> SpurteDuPrinsipal.MaskinPrincipal(jwt)
+                    claims.containsKey("preferred_username") && claims.containsKey("name") -> {
+                        // TODO: må få tak i bearer token på en annen måte vel? hvorfor får vi det ikke fra validate{} !?
+                        val gruppemedlemskap = bearerToken?.let { token -> gruppetilganger.hentGruppemedlemskap(token, logg) } ?: emptyList()
+                        SpurteDuPrinsipal.BrukerPrincipal(jwt, gruppemedlemskap)
+                    }
+                    else -> null // ikke et token vi kjenner igjen
+                }
             }
         }
     }

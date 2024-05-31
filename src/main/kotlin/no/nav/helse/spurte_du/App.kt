@@ -150,16 +150,26 @@ private fun Route.frontend() {
     staticResources("/", "/public/")
 }
 
-class SpurteDuPrinsipal(
+sealed class SpurteDuPrinsipal(
     private val jwtPrincipal: JWTPrincipal,
-    private val gruppetilganger: List<String>
+    private val gruppetilganger: List<String>,
+    extraClaims: List<String>
 ) : Principal {
+    val claims = (extraClaims + gruppetilganger).takeUnless(List<String>::isEmpty)
+    abstract val name: String
 
-    val claims = (listOfNotNull(jwtPrincipal["preferred_username"]) + gruppetilganger).takeUnless(List<String>::isEmpty)
+    class BrukerPrincipal(jwtPrincipal: JWTPrincipal, gruppetilganger: List<String>) : SpurteDuPrinsipal(jwtPrincipal, gruppetilganger, listOfNotNull(jwtPrincipal["preferred_username"])) {
+        override val name: String = "${jwtPrincipal["name"]} (${jwtPrincipal["preferred_username"]})"
+    }
+
+    class MaskinPrincipal(jwtPrincipal: JWTPrincipal) : SpurteDuPrinsipal(jwtPrincipal, emptyList(), listOfNotNull(jwtPrincipal["azp_name"])) {
+        override val name: String = "${jwtPrincipal["azp_name"]}"
+    }
+
     companion object {
 
         fun SpurteDuPrinsipal?.logg(logg: Logg) {
-            logg.info("requested er ${this?.let { "authenticated: ${jwtPrincipal["name"]} (${jwtPrincipal["preferred_username"]})" } ?: "ikke autentisert"}")
+            logg.info("requested er ${this?.let { "authenticated: $name" } ?: "ikke autentisert"}")
         }
     }
 }

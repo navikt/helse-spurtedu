@@ -38,6 +38,13 @@ fun main() {
                 "preferred_username" to "stord@nav.no"
             ),
             grupper = listOf("gruppe2")
+        ),
+        LokalBruker(
+            navn = "maskinbruker",
+            claims = mapOf(
+                "azp_name" to "spleis-api"
+            ),
+            grupper = emptyList()
         )
     )
     val lokaleMaskeringer = listOf(
@@ -76,10 +83,13 @@ class LokalBruker(
 ) {
     private val jwtPrinsipal = JWTPrincipal(LokalePrinsipaler.LokalePayload(claims))
 
-    private fun somPrinsipal() = SpurteDuPrinsipal(
-        jwtPrincipal = jwtPrinsipal,
-        gruppetilganger = grupper
-    )
+    private fun somPrinsipal() = when {
+        claims.containsKey("azp_name") -> SpurteDuPrinsipal.MaskinPrincipal(jwtPrincipal = jwtPrinsipal)
+        else -> SpurteDuPrinsipal.BrukerPrincipal(
+            jwtPrincipal = jwtPrinsipal,
+            gruppetilganger = grupper
+        )
+    }
     companion object {
         fun List<LokalBruker>.håndterAutentisering(context: AuthenticationContext, logg: Logg, bruker: String) {
             val lokalBruker = somPrinsipal(logg, bruker) ?: return logg.info("logger ikke på fordi <bruker> er ikke satt i query string")
