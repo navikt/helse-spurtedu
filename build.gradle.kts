@@ -9,7 +9,7 @@ val mainClass = "no.nav.helse.spurte_du.AppKt"
 group = "no.nav.helse"
 version = properties["version"] ?: "local-build"
 
-val ktorVersion = "2.3.6"
+val ktorVersion = "2.3.12"
 val micrometerRegistryPrometheusVersion = "1.12.3"
 val junitJupiterVersion = "5.10.2"
 val jacksonVersion = "2.16.0"
