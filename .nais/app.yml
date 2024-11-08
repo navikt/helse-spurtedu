@@ -24,7 +24,6 @@ spec:
       rules:
         - application: spammer
         - application: spaghet
-        - application: spleis-api
         - application: spanner
         - application: sparsom-api
         - application: spoiler
