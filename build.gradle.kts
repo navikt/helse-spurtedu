@@ -66,12 +66,12 @@ tasks {
     processResources {
         doLast {
             exec {
-                executable = "npm"
+                executable = "/opt/homebrew/bin/npm"
                 args = listOf("install")
                 workingDir = File("frontend")
             }
             exec {
-                executable = "npm"
+                executable = "/opt/homebrew/bin/npm"
                 args = listOf("run", "build")
                 workingDir = File("frontend")
             }
@@ -103,6 +103,6 @@ tasks {
     }
 
     withType<Wrapper> {
-        gradleVersion = "8.5"
+        gradleVersion = "8.10.2"
     }
 }
