@@ -66,12 +66,12 @@ tasks {
     processResources {
         doLast {
             exec {
-                executable = "/opt/homebrew/bin/npm"
+                executable = "npm"
                 args = listOf("install")
                 workingDir = File("frontend")
             }
             exec {
-                executable = "/opt/homebrew/bin/npm"
+                executable = "npm"
                 args = listOf("run", "build")
                 workingDir = File("frontend")
             }
