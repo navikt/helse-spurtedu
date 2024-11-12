@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
 plugins {
     kotlin("jvm") version "2.0.21"
 }
@@ -54,12 +52,9 @@ dependencies {
 }
 
 kotlin {
-    compilerOptions {
-        compilerOptions.jvmTarget.set(JvmTarget.JVM_21)
+    jvmToolchain {
+        languageVersion.set(JavaLanguageVersion.of("21"))
     }
-}
-java {
-    targetCompatibility = JavaVersion.VERSION_21
 }
 
 tasks {
