@@ -11,7 +11,6 @@ import com.github.navikt.tbd_libs.azure.AzureAuthMethod
 import com.github.navikt.tbd_libs.azure.AzureTokenClient
 import io.ktor.client.*
 import io.ktor.http.*
-import io.ktor.http.auth.*
 import io.ktor.http.content.*
 import io.ktor.serialization.*
 import io.ktor.serialization.jackson.*
@@ -23,7 +22,7 @@ import io.ktor.server.engine.*
 import io.ktor.server.http.content.*
 import io.ktor.server.metrics.micrometer.*
 import io.ktor.server.plugins.callid.*
-import io.ktor.server.plugins.callloging.*
+import io.ktor.server.plugins.calllogging.CallLogging
 import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
@@ -105,17 +104,18 @@ fun launchApp(env: Map<String, String>, logg: Logg) {
     val maskeringer = lagMaskeringer(jedisPool, objectmapper)
     val app = embeddedServer(
         factory = CIO,
-        environment = applicationEngineEnvironment {
+        environment = applicationEnvironment {
             log = logg
-            connectors.add(EngineConnectorBuilder().apply {
+        },
+        configure = {
+            connector {
                 this.port = 8080
-            })
-            module {
-                authentication { azureApp.konfigurerJwtAuth(logg, this, gruppetilganger) }
-                lagApplikasjonsmodul(logg, objectmapper, maskeringer)
             }
         }
-    )
+    ) {
+        authentication { azureApp.konfigurerJwtAuth(logg, this, gruppetilganger) }
+        lagApplikasjonsmodul(logg, objectmapper, maskeringer)
+    }
     app.start(wait = true)
 }
 
@@ -154,7 +154,7 @@ sealed class SpurteDuPrinsipal(
     private val jwtPrincipal: JWTPrincipal,
     private val gruppetilganger: List<String>,
     extraClaims: List<String>
-) : Principal {
+) {
     val claims = (extraClaims + gruppetilganger).takeUnless(List<String>::isEmpty)
     abstract val name: String
 
@@ -193,6 +193,15 @@ private class FormConverter (private val objectMapper: ObjectMapper): ContentCon
                 }
             objectMapper.convertValue(reader, objectMapper.constructType(typeInfo.reifiedType))
         }
+    }
+
+    override suspend fun serialize(
+        contentType: ContentType,
+        charset: Charset,
+        typeInfo: TypeInfo,
+        value: Any?,
+    ): OutgoingContent? {
+        TODO("Not yet implemented")
     }
 }
 

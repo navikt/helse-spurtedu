@@ -3,6 +3,7 @@ package no.nav.helse.spurte_du
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.navikt.tbd_libs.azure.AzureTokenProvider
+import com.github.navikt.tbd_libs.result_object.getOrThrow
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -69,7 +70,7 @@ class Gruppetilganger(
     private fun bytteToken(logg: Logg, bearerToken: String): String? {
         // bytte access token mot et scopet for bruk mot graph api
         return try {
-            azureClient.onBehalfOfToken("https://graph.microsoft.com/.default", bearerToken).token
+            azureClient.onBehalfOfToken("https://graph.microsoft.com/.default", bearerToken).getOrThrow().token
         } catch (err: Exception) {
             logg.info("fikk problemer ved bytting av token")
             null

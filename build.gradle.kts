@@ -7,13 +7,13 @@ val mainClass = "no.nav.helse.spurte_du.AppKt"
 group = "no.nav.helse"
 version = properties["version"] ?: "local-build"
 
-val ktorVersion = "2.3.12"
+val ktorVersion = "3.0.1"
 val micrometerRegistryPrometheusVersion = "1.12.3"
 val junitJupiterVersion = "5.11.3"
 val jacksonVersion = "2.16.0"
 val logbackClassicVersion = "1.4.14"
 val logbackEncoderVersion = "7.4"
-val tbdLibsVersion = "2024.01.09-10.01-864ddafa"
+val tbdLibsVersion = "2024.11.12-11.09-16cf2599"
 
 repositories {
     mavenCentral()
