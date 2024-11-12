@@ -9,7 +9,7 @@ version = properties["version"] ?: "local-build"
 
 val ktorVersion = "2.3.12"
 val micrometerRegistryPrometheusVersion = "1.12.3"
-val junitJupiterVersion = "5.10.2"
+val junitJupiterVersion = "5.11.3"
 val jacksonVersion = "2.16.0"
 val logbackClassicVersion = "1.4.14"
 val logbackEncoderVersion = "7.4"
@@ -46,9 +46,8 @@ dependencies {
     api("redis.clients:jedis:5.1.0")
     implementation("io.ktor:ktor-client-auth:2.3.6")
 
-    testImplementation("org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion")
-    testImplementation("org.junit.jupiter:junit-jupiter-params:$junitJupiterVersion")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junitJupiterVersion")
+    testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 kotlin {
