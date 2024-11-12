@@ -10,10 +10,10 @@ version = properties["version"] ?: "local-build"
 val ktorVersion = "3.0.1"
 val micrometerRegistryPrometheusVersion = "1.12.3"
 val junitJupiterVersion = "5.11.3"
-val jacksonVersion = "2.16.0"
-val logbackClassicVersion = "1.4.14"
-val logbackEncoderVersion = "7.4"
-val tbdLibsVersion = "2024.11.12-11.09-16cf2599"
+val jacksonVersion = "2.18.1"
+val logbackClassicVersion = "1.5.12"
+val logbackEncoderVersion = "8.0"
+val tbdLibsVersion = "2024.11.12-20.46-e1fd6a25"
 
 repositories {
     mavenCentral()
