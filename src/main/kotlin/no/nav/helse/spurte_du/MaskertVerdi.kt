@@ -65,7 +65,7 @@ sealed class MaskertVerdi {
             call.respondRedirect(url = "/oauth2/login?redirect=/vis_meg/$id", permanent = false)
             return false
         }
-        if (påkrevdTilganger.none { it.lowercase() !in tilganger.map(String::lowercase) }) {
+        if (tilganger.isEmpty() || påkrevdTilganger.none { it.lowercase() !in tilganger.map(String::lowercase) }) {
             call.`404`(logg, "Uautorisert tilgang kan ikke innfris. Pålogget bruker har ${tilganger.joinToString()}")
             return false
         }
