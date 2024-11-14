@@ -25,7 +25,11 @@ sealed class MaskertVerdi {
                 if (!node.hasNonNull("id")) return null
                 val id = UUID.fromString(node.path("id").asText())
                 val type = node.path("type").takeIf(JsonNode::isTextual)?.asText() ?: return null
-                val påkrevdTilganger = node.path("påkrevdTilgang").asText().split(',').map(String::trim)
+                val påkrevdTilgangNode = node.path("påkrevdTilgang")
+                val påkrevdTilganger = when {
+                    påkrevdTilgangNode.isTextual -> påkrevdTilgangNode.asText().split(',').map(String::trim)
+                    else -> påkrevdTilgangNode.map { it.asText()}
+                }
                 val opprettet = node.path("opprettet")
                     .takeIf(JsonNode::isTextual)?.asText()
                     ?.let { ZonedDateTime.parse(it) }
