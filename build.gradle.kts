@@ -8,28 +8,34 @@ group = "no.nav.helse"
 version = properties["version"] ?: "local-build"
 
 val ktorVersion = "3.0.1"
-val micrometerRegistryPrometheusVersion = "1.12.3"
 val junitJupiterVersion = "5.11.3"
-val jacksonVersion = "2.18.1"
 val logbackClassicVersion = "1.5.12"
 val logbackEncoderVersion = "8.0"
 val tbdLibsVersion = "2024.11.14-07.56-63a8564f"
 
 repositories {
+    val githubPassword: String? by project
     mavenCentral()
+    /* ihht. https://github.com/navikt/utvikling/blob/main/docs/teknisk/Konsumere%20biblioteker%20fra%20Github%20Package%20Registry.md
+        så plasseres github-maven-repo (med autentisering) før nav-mirror slik at github actions kan anvende førstnevnte.
+        Det er fordi nav-mirroret kjører i Google Cloud og da ville man ellers fått unødvendige utgifter til datatrafikk mellom Google Cloud og GitHub
+     */
+    maven {
+        url = uri("https://maven.pkg.github.com/navikt/maven-release")
+        credentials {
+            username = "x-access-token"
+            password = githubPassword
+        }
+    }
     maven("https://github-package-registry-mirror.gc.nav.no/cached/maven-release")
-    maven("https://jitpack.io")
 }
 
 dependencies {
     api("ch.qos.logback:logback-classic:$logbackClassicVersion")
     api("net.logstash.logback:logstash-logback-encoder:$logbackEncoderVersion")
 
-    api("io.ktor:ktor-client-cio:$ktorVersion")
-    api("io.ktor:ktor-server-cio:$ktorVersion")
-    api("io.ktor:ktor-server-call-id:$ktorVersion")
-    api("io.ktor:ktor-server-content-negotiation:$ktorVersion")
-    api("io.ktor:ktor-serialization-jackson:$ktorVersion")
+    implementation("com.github.navikt.tbd-libs:naisful-app:$tbdLibsVersion")
+
     api("io.ktor:ktor-server-auth:$ktorVersion")
     api("io.ktor:ktor-server-auth-jwt:$ktorVersion") {
         exclude(group = "junit")
@@ -37,14 +43,12 @@ dependencies {
 
     api("com.github.navikt.tbd-libs:azure-token-client:$tbdLibsVersion")
 
-    api("com.fasterxml.jackson.module:jackson-module-kotlin:$jacksonVersion")
-    api("com.fasterxml.jackson.datatype:jackson-datatype-jsr310:$jacksonVersion")
-
-    api("io.ktor:ktor-server-metrics-micrometer:$ktorVersion")
-    api("io.micrometer:micrometer-registry-prometheus:$micrometerRegistryPrometheusVersion")
-
     api("redis.clients:jedis:5.1.0")
-    implementation("io.ktor:ktor-client-auth:2.3.6")
+
+    implementation("io.ktor:ktor-client-auth:$ktorVersion")
+    implementation("io.ktor:ktor-client-cio:$ktorVersion")
+
+    testImplementation("com.github.navikt.tbd-libs:naisful-test-app:$tbdLibsVersion")
 
     testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")

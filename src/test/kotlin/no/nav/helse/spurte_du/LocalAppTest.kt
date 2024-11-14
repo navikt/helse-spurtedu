@@ -104,7 +104,7 @@ class LokalBruker(
     }
 }
 
-private class LokalePrinsipaler(private val logg: Logg, private val lokaleBrukere: List<LokalBruker>) {
+class LokalePrinsipaler(private val logg: Logg, private val lokaleBrukere: List<LokalBruker>) {
     fun håndterAutentisering(logg: Logg, context: AuthenticationContext) {
         val bruker = context.call.parameters["bruker"] ?: return
         lokaleBrukere.håndterAutentisering(context, logg, bruker)
@@ -167,7 +167,7 @@ private class LokalePrinsipaler(private val logg: Logg, private val lokaleBruker
     }
 }
 
-private class LokaleMaskeringer(lokaleMaskeringer: List<MaskertVerdi>, private val objectMapper: ObjectMapper) : Maskeringtjeneste {
+class LokaleMaskeringer(lokaleMaskeringer: List<MaskertVerdi>, private val objectMapper: ObjectMapper) : Maskeringtjeneste {
     private val maskeringer = mutableMapOf<UUID, String>()
 
     init {

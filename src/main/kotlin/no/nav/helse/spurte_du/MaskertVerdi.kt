@@ -73,7 +73,9 @@ sealed class MaskertVerdi {
             call.respondRedirect(url = "/oauth2/login?redirect=/vis_meg/$id", permanent = false)
             return false
         }
-        if (tilganger.isEmpty() || påkrevdTilganger.none { it.lowercase() !in tilganger.map(String::lowercase) }) {
+
+        val harMinstEnTilgang = påkrevdTilganger.any { it.lowercase() in tilganger.map(String::lowercase) }
+        if (!harMinstEnTilgang) {
             logg.sikker().info("verdien har påkrevde tilganger (${påkrevdTilganger.joinToString()}), men bruker har ${tilganger.joinToString()}")
             call.`404`(logg, "Uautorisert tilgang kan ikke innfris. Pålogget bruker har ${tilganger.joinToString()}")
             return false
