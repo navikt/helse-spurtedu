@@ -60,15 +60,21 @@ sealed class MaskertVerdi {
     }
 
     private suspend fun vurderTilgang(call: ApplicationCall, logg: Logg, tilganger: List<String>?): Boolean {
-        if (påkrevdTilganger.isEmpty()) return true
+        if (påkrevdTilganger.isEmpty()) {
+            logg.sikker().info("verdien har ingen påkrevde tilganger, og tilgangen innfris")
+            return true
+        }
         if (tilganger == null) {
+            logg.sikker().info("verdien har påkrevde tilganger, men bruker er ikke innlogget")
             call.respondRedirect(url = "/oauth2/login?redirect=/vis_meg/$id", permanent = false)
             return false
         }
         if (tilganger.isEmpty() || påkrevdTilganger.none { it.lowercase() !in tilganger.map(String::lowercase) }) {
+            logg.sikker().info("verdien har påkrevde tilganger (${påkrevdTilganger.joinToString()}), men bruker har ${tilganger.joinToString()}")
             call.`404`(logg, "Uautorisert tilgang kan ikke innfris. Pålogget bruker har ${tilganger.joinToString()}")
             return false
         }
+        logg.sikker().info("tilgang innfris for ${påkrevdTilganger.joinToString()} for bruker med ${tilganger.joinToString()}")
         return true
     }
 
