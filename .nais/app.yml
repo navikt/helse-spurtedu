@@ -13,6 +13,7 @@ spec:
     path: /isready
   prometheus:
     path: /metrics
+    enabled: true
   secureLogs:
     enabled: true
   ingresses:
