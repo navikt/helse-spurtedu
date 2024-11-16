@@ -1,6 +1,5 @@
 package no.nav.helse.spurte_du
 
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
@@ -8,9 +7,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.util.*
-import io.ktor.util.toMap
 import no.nav.helse.spurte_du.SpurteDuPrinsipal.Companion.logg
-import org.slf4j.LoggerFactory
 import java.util.*
 
 fun Route.api(logg: Logg, maskeringer: Maskeringtjeneste) {
@@ -90,8 +87,6 @@ fun Route.api(logg: Logg, maskeringer: Maskeringtjeneste) {
         val maskertVerdi = request?.tilMaskertVerdi() ?: return@post call.respond(HttpStatusCode.BadRequest, ApiFeilmelding(
             """Du må angi en gyldig json-kropp. Eksempel: { "url": "en-url", "påkrevdTilgang": "<en azure gruppe-ID eller NAV-epost>" } eller { "tekst": "en tekst" } """
         ))
-        val headers = jacksonObjectMapper().writeValueAsString(call.request.headers.toMap())
-        LoggerFactory.getLogger("tjenestekall").info("skjuler en maskert verdi. http headers = $headers")
         val id = maskeringer.lagre(maskertVerdi)
         val path = "/vis_meg/$id"
         call.respond(SkjulMegRespons(
