@@ -77,10 +77,27 @@ fun launchApp(env: Map<String, String>, logg: Logg) {
         objectMapper = objectmapper,
         applicationLogger = logg,
         callLogger = LoggerFactory.getLogger("no.nav.helse.spurte_du.api.CallLogging"),
-        timersConfig = { call, _ -> tag("azp_name", call.principal<JWTPrincipal>()?.get("azp_name") ?: "n/a") },
+        timersConfig = { call, _ ->
+            val konsumentnavn = when (val principal = call.principal<SpurteDuPrinsipal>()) {
+                null -> null
+                is SpurteDuPrinsipal.BrukerPrincipal -> principal.epost
+                is SpurteDuPrinsipal.MaskinPrincipal -> principal.name
+            }
+            tag("konsument", konsumentnavn ?: "n/a")
+        },
         mdcEntries = mapOf(
-            "azp_name" to { call: ApplicationCall -> call.principal<JWTPrincipal>()?.get("azp_name") },
-            "preferred_username" to { call: ApplicationCall -> call.principal<JWTPrincipal>()?.get("preferred_username") }
+            "azp_name" to { call: ApplicationCall ->
+                when (val principal = call.principal<SpurteDuPrinsipal>()) {
+                    is SpurteDuPrinsipal.MaskinPrincipal -> principal.name
+                    else -> null
+                }
+            },
+            "epost" to { call: ApplicationCall ->
+                when (val principal = call.principal<SpurteDuPrinsipal>()) {
+                    is SpurteDuPrinsipal.BrukerPrincipal -> principal.epost
+                    else -> null
+                }
+            }
         )
     ) {
         authentication { azureApp.konfigurerJwtAuth(logg, this, gruppetilganger) }
@@ -111,7 +128,9 @@ sealed class SpurteDuPrinsipal(
     abstract val name: String
 
     class BrukerPrincipal(jwtPrincipal: JWTPrincipal, gruppetilganger: List<String>) : SpurteDuPrinsipal(jwtPrincipal, gruppetilganger, listOfNotNull(jwtPrincipal["preferred_username"])) {
-        override val name: String = "${jwtPrincipal["name"]} (${jwtPrincipal["preferred_username"]})"
+        val epost = jwtPrincipal["preferred_username"]
+        val fulltNavn = jwtPrincipal["name"]
+        override val name: String = "$epost"
     }
 
     class MaskinPrincipal(jwtPrincipal: JWTPrincipal) : SpurteDuPrinsipal(jwtPrincipal, emptyList(), listOfNotNull(jwtPrincipal["azp_name"])) {
