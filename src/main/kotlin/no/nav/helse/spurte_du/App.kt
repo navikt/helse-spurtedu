@@ -15,6 +15,7 @@ import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.http.content.*
+import io.ktor.server.request.header
 import io.ktor.server.routing.*
 import io.micrometer.core.instrument.Clock
 import io.micrometer.prometheusmetrics.PrometheusConfig
@@ -79,9 +80,9 @@ fun launchApp(env: Map<String, String>, logg: Logg) {
         callLogger = LoggerFactory.getLogger("no.nav.helse.spurte_du.api.CallLogging"),
         timersConfig = { call, _ ->
             val konsumentnavn = when (val principal = call.principal<SpurteDuPrinsipal>()) {
-                null -> null
                 is SpurteDuPrinsipal.BrukerPrincipal -> principal.epost
                 is SpurteDuPrinsipal.MaskinPrincipal -> principal.name
+                null -> call.request.header("L5d-Client-Id")
             }
             tag("konsument", konsumentnavn ?: "n/a")
         },
