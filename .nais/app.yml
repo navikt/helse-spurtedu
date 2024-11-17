@@ -26,7 +26,6 @@ spec:
         - application: spammer
         - application: spaghet
         - application: spanner
-        - application: sparsom-api
         - application: spoiler
   azure:
     sidecar:
