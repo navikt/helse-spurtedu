@@ -82,9 +82,13 @@ fun launchApp(env: Map<String, String>, logg: Logg) {
             val konsumentnavn = when (val principal = call.principal<SpurteDuPrinsipal>()) {
                 is SpurteDuPrinsipal.BrukerPrincipal -> principal.epost
                 is SpurteDuPrinsipal.MaskinPrincipal -> principal.name
-                null -> call.request.header("L5d-Client-Id")
+                else -> null
             }
-            tag("konsument", konsumentnavn ?: "n/a")
+            this
+                .tag("azp_name", konsumentnavn ?: "n/a")
+                // https://github.com/linkerd/polixy/blob/main/DESIGN.md#l5d-client-id-client-id
+                // eksempel: <APP>.<NAMESPACE>.serviceaccount.identity.linkerd.cluster.local
+                .tag("konsument", call.request.header("L5d-Client-Id") ?: "n/a")
         },
         mdcEntries = mapOf(
             "azp_name" to { call: ApplicationCall ->
@@ -98,7 +102,8 @@ fun launchApp(env: Map<String, String>, logg: Logg) {
                     is SpurteDuPrinsipal.BrukerPrincipal -> principal.epost
                     else -> null
                 }
-            }
+            },
+            "konsument" to { call: ApplicationCall -> call.request.header("L5d-Client-Id") }
         )
     ) {
         authentication { azureApp.konfigurerJwtAuth(logg, this, gruppetilganger) }
