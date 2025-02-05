@@ -152,10 +152,10 @@ sealed class SpurteDuPrinsipal(
 }
 
 private fun lagJedistilkobling(env: Map<String, String>, logg: Logg): JedisPool {
-    val uri = URI(env.getValue("REDIS_URI_OPPSLAG"))
+    val uri = URI(env.getValue("VALKEY_URI_OPPSLAG"))
     val config = DefaultJedisClientConfig.builder()
-        .user(env.getValue("REDIS_USERNAME_OPPSLAG"))
-        .password(env.getValue("REDIS_PASSWORD_OPPSLAG"))
+        .user(env.getValue("VALKEY_USERNAME_OPPSLAG"))
+        .password(env.getValue("VALKEY_PASSWORD_OPPSLAG"))
         .ssl(true)
         .hostnameVerifier { hostname, session ->
             val evaluering = hostname == uri.host

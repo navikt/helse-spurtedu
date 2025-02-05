@@ -54,7 +54,7 @@ class Gruppetilganger(
                 }
             }
         } catch (err: Exception) {
-            logg.info("Fikk en feil ved henting av verdi fra Redis")
+            logg.info("Fikk en feil ved henting av verdi fra Valkey")
             return null
         }
     }

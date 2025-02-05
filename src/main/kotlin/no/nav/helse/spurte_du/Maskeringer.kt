@@ -35,15 +35,15 @@ class Maskeringer(
             jedisPool.resource.use { jedis ->
                 val maskertVerdi = jedis.hget(maskerteVerdier, "$id")
                 if (maskertVerdi == null) {
-                    call.`404`(logg, "Finner ikke verdi i Redis")
+                    call.`404`(logg, "Finner ikke verdi i Valkey")
                     return null
                 }
                 val verdi = MaskertVerdi.fraJson(objectMapper, maskertVerdi, logg)
-                if (verdi == null) call.`404`(logg, "Kan ikke deserialisere verdi fra Redis")
+                if (verdi == null) call.`404`(logg, "Kan ikke deserialisere verdi fra Valkey")
                 return verdi
             }
         } catch (err: JedisException) {
-            logg.error("Feil ved tilkobling til Redis: {}", err.message, err)
+            logg.error("Feil ved tilkobling til Valkey: {}", err.message, err)
             call.respondText("Nå røyk vi på en smell her. Vi får håpe det er forbigående!", status = HttpStatusCode.InternalServerError)
             return null
         }

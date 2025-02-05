@@ -35,6 +35,6 @@ spec:
       tenant: nav.no
       enabled: true
       allowAllUsers: true
-  redis:
+  valkey:
     - instance: oppslag
       access: readwrite
