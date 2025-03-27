@@ -7,11 +7,11 @@ val mainClass = "no.nav.helse.spurte_du.AppKt"
 group = "no.nav.helse"
 version = properties["version"] ?: "local-build"
 
-val ktorVersion = "3.0.1"
-val junitJupiterVersion = "5.11.3"
+val ktorVersion = "3.1.2"
+val junitJupiterVersion = "5.12.1"
 val logbackClassicVersion = "1.5.12"
 val logbackEncoderVersion = "8.0"
-val tbdLibsVersion = "2025.01.27-12.50-76316f3b"
+val tbdLibsVersion = "2025.03.27-18.30-c228796d"
 
 repositories {
     val githubPassword: String? by project
