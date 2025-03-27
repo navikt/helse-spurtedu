@@ -41,8 +41,6 @@ jobs:
         with:
           team: tbd
           tag: ${{ needs.set_version.outputs.image }}
-          project_id: ${{ vars.NAIS_MANAGEMENT_PROJECT_ID }}
-          identity_provider: ${{ secrets.NAIS_WORKLOAD_IDENTITY_PROVIDER }}
     outputs:
       image: ${{ steps.docker-build-push.outputs.image }}
 
