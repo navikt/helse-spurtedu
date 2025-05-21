@@ -38,3 +38,7 @@ spec:
   valkey:
     - instance: oppslag
       access: readwrite
+  observability:
+    logging:
+      destinations:
+        - id: elastic
