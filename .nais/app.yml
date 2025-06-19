@@ -21,6 +21,10 @@ spec:
     - {{i}}
   {{/each}}
   accessPolicy:
+    outbound:
+      rules:
+        - application: logging
+          namespace: nais-system
     inbound:
       rules:
         - application: spammer
