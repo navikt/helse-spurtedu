@@ -9,7 +9,7 @@ version = properties["version"] ?: "local-build"
 
 val ktorVersion = "3.2.3"
 val junitJupiterVersion = "5.12.1"
-val logbackClassicVersion = "1.5.12"
+val logbackClassicVersion = "1.5.18"
 val logbackEncoderVersion = "8.0"
 val tbdLibsVersion = "2025.08.16-09.21-71db7cad"
 
