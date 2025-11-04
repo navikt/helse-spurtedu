@@ -1,5 +1,5 @@
 plugins {
-    kotlin("jvm") version "2.2.10"
+    kotlin("jvm") version "2.2.21"
 }
 
 val mainClass = "no.nav.helse.spurte_du.AppKt"
@@ -11,7 +11,7 @@ val ktorVersion = "3.2.3"
 val junitJupiterVersion = "5.12.1"
 val logbackClassicVersion = "1.5.18"
 val logbackEncoderVersion = "8.0"
-val tbdLibsVersion = "2025.09.19-15.24-1a9c113f"
+val tbdLibsVersion = "2025.11.04-10.12-3a167132"
 
 repositories {
     val githubPassword: String? by project
