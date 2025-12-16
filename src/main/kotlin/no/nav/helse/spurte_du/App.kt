@@ -14,7 +14,6 @@ import io.ktor.client.*
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
-import io.ktor.server.http.content.*
 import io.ktor.server.request.header
 import io.ktor.server.routing.*
 import io.micrometer.core.instrument.Clock
@@ -114,15 +113,10 @@ fun launchApp(env: Map<String, String>, logg: Logg) {
 
 fun Application.lagApplikasjonsmodul(logg: Logg, objectMapper: ObjectMapper, maskeringer: Maskeringtjeneste) {
     routing {
-        frontend()
         authenticate(optional = true) {
             api(logg, maskeringer)
         }
     }
-}
-
-private fun Route.frontend() {
-    staticResources("/", "/public/")
 }
 
 sealed class SpurteDuPrinsipal(

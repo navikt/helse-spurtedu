@@ -6,8 +6,6 @@ target
 # Ignore Gradle GUI config
 gradle-app.setting
 
-node_modules
-
 # Cache of project
 .gradletasknamecache
 
@@ -41,7 +39,6 @@ node_modules
 
 # NetBeans specific
 nbproject/private/
-build/
 nbbuild/
 dist/
 nbdist/

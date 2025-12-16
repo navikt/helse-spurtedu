@@ -61,18 +61,6 @@ kotlin {
 }
 
 tasks {
-    register<Exec>("npmInstall") {
-        workingDir = file("frontend")
-        commandLine = listOf("npm", "install")
-    }
-    register<Exec>("npmBuild") {
-        workingDir = file("frontend")
-        commandLine = listOf("npm", "run", "build")
-        dependsOn("npmInstall")
-    }
-    processResources {
-        dependsOn("npmBuild")
-    }
     withType<Jar> {
         archiveBaseName.set("app")
 
