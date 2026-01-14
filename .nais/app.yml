@@ -14,8 +14,6 @@ spec:
   prometheus:
     path: /metrics
     enabled: true
-  secureLogs:
-    enabled: true
   ingresses:
   {{# each ingress as |i| }}
     - {{i}}
