@@ -11,7 +11,7 @@ val ktorVersion = "3.2.3"
 val junitJupiterVersion = "5.12.1"
 val logbackClassicVersion = "1.5.18"
 val logbackEncoderVersion = "8.0"
-val tbdLibsVersion = "2025.11.04-10.12-3a167132"
+val tbdLibsVersion = "2026.01.22-09.16-1d3f6039"
 
 repositories {
     val githubPassword: String? by project
