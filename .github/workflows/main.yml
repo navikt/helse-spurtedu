@@ -31,6 +31,8 @@ jobs:
           cache: 'gradle'
       - name: test and build
         run: ./gradlew build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: nais/docker-build-push@v0
         id: docker-build-push
         with:
