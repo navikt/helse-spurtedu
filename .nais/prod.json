@@ -2,5 +2,6 @@
   "ingress": [
     "https://spurte-du.intern.nav.no",
     "https://spurte-du.ansatt.nav.no"
-  ]
+  ],
+  "tenant" : "nav.no"
 }

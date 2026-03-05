@@ -34,7 +34,7 @@ spec:
       enabled: true
       autoLogin: false
     application:
-      tenant: nav.no
+      tenant: {{ tenant }}
       enabled: true
       allowAllUsers: true
   valkey:
