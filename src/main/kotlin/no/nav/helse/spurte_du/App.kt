@@ -33,14 +33,16 @@ import io.ktor.client.engine.cio.CIO as ClientEngineCioCIO
 private val logg = LoggerFactory.getLogger("no.nav.helse.spurte_du.App")
 private val sikkerlogg = LoggerFactory.getLogger("tjenestekall")
 
-private val objectmapper get() = jacksonObjectMapper()
-    .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-    .registerModule(JavaTimeModule())
-    .setDefaultPrettyPrinter(DefaultPrettyPrinter().apply {
-        indentArraysWith(DefaultPrettyPrinter.FixedSpaceIndenter.instance)
-        indentObjectsWith(DefaultIndenter("  ", "\n"))
-    })
-
+private val objectmapper get() =
+    jacksonObjectMapper()
+        .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+        .registerModule(JavaTimeModule())
+        .setDefaultPrettyPrinter(
+            DefaultPrettyPrinter().apply {
+                indentArraysWith(DefaultPrettyPrinter.FixedSpaceIndenter.instance)
+                indentObjectsWith(DefaultIndenter("  ", "\n"))
+            },
+        )
 
 fun main() {
     val logg = Logg(logg, sikkerlogg)
@@ -52,66 +54,79 @@ fun main() {
     launchApp(env, logg)
 }
 
-fun launchApp(env: Map<String, String>, logg: Logg) {
+fun launchApp(
+    env: Map<String, String>,
+    logg: Logg,
+) {
     val jedisPool = lagJedistilkobling(env, logg)
     val httpClient = HttpClient(ClientEngineCioCIO)
-    val azureClient = JedisTokenCache(
-        jedisPool = jedisPool,
-        other = AzureTokenClient(
-            tokenEndpoint = URI(env.getValue("AZURE_OPENID_CONFIG_TOKEN_ENDPOINT")),
+    val azureClient =
+        JedisTokenCache(
+            jedisPool = jedisPool,
+            other =
+                AzureTokenClient(
+                    tokenEndpoint = URI(env.getValue("AZURE_OPENID_CONFIG_TOKEN_ENDPOINT")),
+                    clientId = env.getValue("AZURE_APP_CLIENT_ID"),
+                    authMethod = AzureAuthMethod.Secret(env.getValue("AZURE_APP_CLIENT_SECRET")),
+                    objectMapper = objectmapper,
+                ),
+            logg = logg,
+        )
+    val azureApp =
+        AzureApp(
+            jwkProvider = JwkProviderBuilder(URI(env.getValue("AZURE_OPENID_CONFIG_JWKS_URI")).toURL()).build(),
+            issuer = env.getValue("AZURE_OPENID_CONFIG_ISSUER"),
             clientId = env.getValue("AZURE_APP_CLIENT_ID"),
-            authMethod = AzureAuthMethod.Secret(env.getValue("AZURE_APP_CLIENT_SECRET")),
-            objectMapper = objectmapper
-        ),
-        logg = logg
-    )
-    val azureApp = AzureApp(
-        jwkProvider = JwkProviderBuilder(URI(env.getValue("AZURE_OPENID_CONFIG_JWKS_URI")).toURL()).build(),
-        issuer = env.getValue("AZURE_OPENID_CONFIG_ISSUER"),
-        clientId = env.getValue("AZURE_APP_CLIENT_ID"),
-    )
+        )
     val gruppetilganger = Gruppetilganger(jedisPool, azureClient, httpClient, objectmapper)
     val maskeringer = lagMaskeringer(jedisPool, objectmapper)
-    val app = naisApp(
-        meterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT, PrometheusRegistry.defaultRegistry, Clock.SYSTEM),
-        objectMapper = objectmapper,
-        applicationLogger = logg,
-        callLogger = LoggerFactory.getLogger("no.nav.helse.spurte_du.api.CallLogging"),
-        timersConfig = { call, _ ->
-            val konsumentnavn = when (val principal = call.principal<SpurteDuPrinsipal>()) {
-                is SpurteDuPrinsipal.BrukerPrincipal -> principal.epost
-                is SpurteDuPrinsipal.MaskinPrincipal -> principal.name
-                else -> null
-            }
-            this
-                .tag("azp_name", konsumentnavn ?: "n/a")
-                // https://github.com/linkerd/polixy/blob/main/DESIGN.md#l5d-client-id-client-id
-                // eksempel: <APP>.<NAMESPACE>.serviceaccount.identity.linkerd.cluster.local
-                .tag("konsument", call.request.header("L5d-Client-Id") ?: "n/a")
-        },
-        mdcEntries = mapOf(
-            "azp_name" to { call: ApplicationCall ->
-                when (val principal = call.principal<SpurteDuPrinsipal>()) {
-                    is SpurteDuPrinsipal.MaskinPrincipal -> principal.name
-                    else -> null
-                }
+    val app =
+        naisApp(
+            meterRegistry = PrometheusMeterRegistry(PrometheusConfig.DEFAULT, PrometheusRegistry.defaultRegistry, Clock.SYSTEM),
+            objectMapper = objectmapper,
+            applicationLogger = logg,
+            callLogger = LoggerFactory.getLogger("no.nav.helse.spurte_du.api.CallLogging"),
+            timersConfig = { call, _ ->
+                val konsumentnavn =
+                    when (val principal = call.principal<SpurteDuPrinsipal>()) {
+                        is SpurteDuPrinsipal.BrukerPrincipal -> principal.epost
+                        is SpurteDuPrinsipal.MaskinPrincipal -> principal.name
+                        else -> null
+                    }
+                this
+                    .tag("azp_name", konsumentnavn ?: "n/a")
+                    // https://github.com/linkerd/polixy/blob/main/DESIGN.md#l5d-client-id-client-id
+                    // eksempel: <APP>.<NAMESPACE>.serviceaccount.identity.linkerd.cluster.local
+                    .tag("konsument", call.request.header("L5d-Client-Id") ?: "n/a")
             },
-            "epost" to { call: ApplicationCall ->
-                when (val principal = call.principal<SpurteDuPrinsipal>()) {
-                    is SpurteDuPrinsipal.BrukerPrincipal -> principal.epost
-                    else -> null
-                }
-            },
-            "konsument" to { call: ApplicationCall -> call.request.header("L5d-Client-Id") }
-        )
-    ) {
-        authentication { azureApp.konfigurerJwtAuth(logg, this, gruppetilganger) }
-        lagApplikasjonsmodul(logg, objectmapper, maskeringer)
-    }
+            mdcEntries =
+                mapOf(
+                    "azp_name" to { call: ApplicationCall ->
+                        when (val principal = call.principal<SpurteDuPrinsipal>()) {
+                            is SpurteDuPrinsipal.MaskinPrincipal -> principal.name
+                            else -> null
+                        }
+                    },
+                    "epost" to { call: ApplicationCall ->
+                        when (val principal = call.principal<SpurteDuPrinsipal>()) {
+                            is SpurteDuPrinsipal.BrukerPrincipal -> principal.epost
+                            else -> null
+                        }
+                    },
+                    "konsument" to { call: ApplicationCall -> call.request.header("L5d-Client-Id") },
+                ),
+        ) {
+            authentication { azureApp.konfigurerJwtAuth(logg, this, gruppetilganger) }
+            lagApplikasjonsmodul(logg, objectmapper, maskeringer)
+        }
     app.start(wait = true)
 }
 
-fun Application.lagApplikasjonsmodul(logg: Logg, objectMapper: ObjectMapper, maskeringer: Maskeringtjeneste) {
+fun Application.lagApplikasjonsmodul(
+    logg: Logg,
+    objectMapper: ObjectMapper,
+    maskeringer: Maskeringtjeneste,
+) {
     routing {
         authenticate(optional = true) {
             api(logg, maskeringer)
@@ -122,47 +137,55 @@ fun Application.lagApplikasjonsmodul(logg: Logg, objectMapper: ObjectMapper, mas
 sealed class SpurteDuPrinsipal(
     private val jwtPrincipal: JWTPrincipal,
     private val gruppetilganger: List<String>,
-    extraClaims: List<String>
+    extraClaims: List<String>,
 ) {
     val claims = (extraClaims + gruppetilganger).takeUnless(List<String>::isEmpty)
     abstract val name: String
 
-    class BrukerPrincipal(jwtPrincipal: JWTPrincipal, gruppetilganger: List<String>) : SpurteDuPrinsipal(jwtPrincipal, gruppetilganger, listOfNotNull(jwtPrincipal["preferred_username"])) {
+    class BrukerPrincipal(
+        jwtPrincipal: JWTPrincipal,
+        gruppetilganger: List<String>,
+    ) : SpurteDuPrinsipal(jwtPrincipal, gruppetilganger, listOfNotNull(jwtPrincipal["preferred_username"])) {
         val epost = jwtPrincipal["preferred_username"]
         val fulltNavn = jwtPrincipal["name"]
         override val name: String = "$epost"
     }
 
-    class MaskinPrincipal(jwtPrincipal: JWTPrincipal) : SpurteDuPrinsipal(jwtPrincipal, emptyList(), listOfNotNull(jwtPrincipal["azp_name"])) {
+    class MaskinPrincipal(
+        jwtPrincipal: JWTPrincipal,
+    ) : SpurteDuPrinsipal(jwtPrincipal, emptyList(), listOfNotNull(jwtPrincipal["azp_name"])) {
         override val name: String = "${jwtPrincipal["azp_name"]}"
     }
 
     companion object {
-
         fun SpurteDuPrinsipal?.logg(logg: Logg) {
             logg.info("requested er ${this?.let { "authenticated: $name" } ?: "ikke autentisert"}")
         }
     }
 }
 
-private fun lagJedistilkobling(env: Map<String, String>, logg: Logg): JedisPool {
+private fun lagJedistilkobling(
+    env: Map<String, String>,
+    logg: Logg,
+): JedisPool {
     val uri = URI(env.getValue("VALKEY_URI_OPPSLAG"))
-    val config = DefaultJedisClientConfig.builder()
-        .user(env.getValue("VALKEY_USERNAME_OPPSLAG"))
-        .password(env.getValue("VALKEY_PASSWORD_OPPSLAG"))
-        .ssl(true)
-        .hostnameVerifier { hostname, session ->
-            val evaluering = hostname == uri.host
-            logg.info("verifiserer vertsnavn $hostname: {}", evaluering)
-            evaluering
+    val config =
+        DefaultJedisClientConfig
+            .builder()
+            .user(env.getValue("VALKEY_USERNAME_OPPSLAG"))
+            .password(env.getValue("VALKEY_PASSWORD_OPPSLAG"))
+            .ssl(true)
+            .hostnameVerifier { hostname, session ->
+                val evaluering = hostname == uri.host
+                logg.info("verifiserer vertsnavn $hostname: {}", evaluering)
+                evaluering
+            }.build()
+    val poolConfig =
+        JedisPoolConfig().apply {
+            minIdle = 1 // minimum antall ledige tilkoblinger
+            setMaxWait(Duration.ofSeconds(3)) // maksimal ventetid på tilkobling
+            testOnBorrow = true // tester tilkoblingen før lån
+            testWhileIdle = true // tester ledige tilkoblinger periodisk
         }
-        .build()
-    val poolConfig = JedisPoolConfig().apply {
-        minIdle = 1 // minimum antall ledige tilkoblinger
-        setMaxWait(Duration.ofSeconds(3)) // maksimal ventetid på tilkobling
-        testOnBorrow = true // tester tilkoblingen før lån
-        testWhileIdle = true // tester ledige tilkoblinger periodisk
-
-    }
     return JedisPool(poolConfig, HostAndPort(uri.host, uri.port), config)
 }

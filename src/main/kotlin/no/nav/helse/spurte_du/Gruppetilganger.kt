@@ -15,29 +15,42 @@ import java.security.MessageDigest
 import java.time.Duration
 
 interface Gruppetilgangtjeneste {
-    fun hentGruppemedlemskap(bearerToken: String, logg: Logg): List<String>
+    fun hentGruppemedlemskap(
+        bearerToken: String,
+        logg: Logg,
+    ): List<String>
 }
 
 class Gruppetilganger(
     private val jedisPool: JedisPool,
     private val azureClient: AzureTokenProvider,
     private val httpClient: HttpClient,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
 ) : Gruppetilgangtjeneste {
-    override fun hentGruppemedlemskap(bearerToken: String, logg: Logg): List<String> {
-        return hentMedlemskapFraMellomlager(bearerToken, logg) ?: hentMedlemskapFraAzure(bearerToken, logg)
-    }
+    override fun hentGruppemedlemskap(
+        bearerToken: String,
+        logg: Logg,
+    ): List<String> = hentMedlemskapFraMellomlager(bearerToken, logg) ?: hentMedlemskapFraAzure(bearerToken, logg)
 
-    private fun hentMedlemskapFraAzure(bearerToken: String, logg: Logg): List<String> {
+    private fun hentMedlemskapFraAzure(
+        bearerToken: String,
+        logg: Logg,
+    ): List<String> {
         logg.info("Henter gruppemedlemskap fra microsoft graph")
         val exchanged = bytteToken(logg, bearerToken) ?: return emptyList()
         return try {
             hentDirekteMedlemskap(logg, exchanged).also {
                 jedisPool.resource.use { jedis ->
                     logg.info("Lagrer gruppemedlemskap til mellomlager")
-                    jedis.set(mellomlagringsnøkkel(bearerToken), objectMapper.writeValueAsString(mapOf(
-                        "grupper" to it
-                    )), SetParams.setParams().ex(Duration.ofMinutes(30).toSeconds()))
+                    jedis.set(
+                        mellomlagringsnøkkel(bearerToken),
+                        objectMapper.writeValueAsString(
+                            mapOf(
+                                "grupper" to it,
+                            ),
+                        ),
+                        SetParams.setParams().ex(Duration.ofMinutes(30).toSeconds()),
+                    )
                 }
             }
         } catch (err: Exception) {
@@ -45,12 +58,19 @@ class Gruppetilganger(
         }
     }
 
-    private fun hentMedlemskapFraMellomlager(token: String, logg: Logg): List<String>? {
+    private fun hentMedlemskapFraMellomlager(
+        token: String,
+        logg: Logg,
+    ): List<String>? {
         return try {
             jedisPool.resource.use { jedis ->
                 jedis.get(mellomlagringsnøkkel(token))?.let { mellomlagretVerdi ->
                     logg.info("Henter gruppemedlemskap fra mellomlager")
-                    objectMapper.readTree(mellomlagretVerdi).path("grupper").takeIf(JsonNode::isArray)?.map { it.asText() }
+                    objectMapper
+                        .readTree(mellomlagretVerdi)
+                        .path("grupper")
+                        .takeIf(JsonNode::isArray)
+                        ?.map { it.asText() }
                 }
             }
         } catch (err: Exception) {
@@ -67,7 +87,10 @@ class Gruppetilganger(
         return digest.toHexString()
     }
 
-    private fun bytteToken(logg: Logg, bearerToken: String): String? {
+    private fun bytteToken(
+        logg: Logg,
+        bearerToken: String,
+    ): String? {
         // bytte access token mot et scopet for bruk mot graph api
         return try {
             azureClient.onBehalfOfToken("https://graph.microsoft.com/.default", bearerToken).getOrThrow().token
@@ -77,13 +100,18 @@ class Gruppetilganger(
         }
     }
 
-    private fun hentDirekteMedlemskap(logg: Logg, token: String): List<String> {
-        val body = runBlocking {
-            val response = httpClient.get("https://graph.microsoft.com/v1.0/me/memberOf?\$select=id,displayName") {
-                header(HttpHeaders.Authorization, "Bearer $token")
+    private fun hentDirekteMedlemskap(
+        logg: Logg,
+        token: String,
+    ): List<String> {
+        val body =
+            runBlocking {
+                val response =
+                    httpClient.get("https://graph.microsoft.com/v1.0/me/memberOf?\$select=id,displayName") {
+                        header(HttpHeaders.Authorization, "Bearer $token")
+                    }
+                response.bodyAsText()
             }
-            response.bodyAsText()
-        }
         logg.sikker().info("respons fra microsoft graph:\n$body")
         val json = objectMapper.readTree(body)
         return json.path("value").map { medlemskap ->

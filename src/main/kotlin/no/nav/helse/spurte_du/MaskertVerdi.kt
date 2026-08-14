@@ -14,11 +14,16 @@ import java.util.*
 
 sealed class MaskertVerdi {
     companion object {
-        fun fraJson(objectMapper: ObjectMapper, json: String, logg: Logg): MaskertVerdi? {
-            val implementasjoner: List<(UUID, String, ZonedDateTime, List<String>, JsonNode) -> MaskertVerdi?> = listOf(
-                MaskertVerdi.Tekst::fraJson,
-                MaskertVerdi.Url::fraJson
-            )
+        fun fraJson(
+            objectMapper: ObjectMapper,
+            json: String,
+            logg: Logg,
+        ): MaskertVerdi? {
+            val implementasjoner: List<(UUID, String, ZonedDateTime, List<String>, JsonNode) -> MaskertVerdi?> =
+                listOf(
+                    MaskertVerdi.Tekst::fraJson,
+                    MaskertVerdi.Url::fraJson,
+                )
             return try {
                 logg.sikker().info("forsøker å deserialisere: $json")
                 val node = objectMapper.readTree(json)
@@ -26,14 +31,18 @@ sealed class MaskertVerdi {
                 val id = UUID.fromString(node.path("id").asText())
                 val type = node.path("type").takeIf(JsonNode::isTextual)?.asText() ?: return null
                 val påkrevdTilgangNode = node.path("påkrevdTilgang")
-                val påkrevdTilganger = when {
-                    påkrevdTilgangNode.isTextual -> påkrevdTilgangNode.asText().split(',').map(String::trim)
-                    else -> påkrevdTilgangNode.map { it.asText()}
-                }
-                val opprettet = node.path("opprettet")
-                    .takeIf(JsonNode::isTextual)?.asText()
-                    ?.let { ZonedDateTime.parse(it) }
-                    ?: ZonedDateTime.ofInstant(Instant.EPOCH, ZoneId.systemDefault())
+                val påkrevdTilganger =
+                    when {
+                        påkrevdTilgangNode.isTextual -> påkrevdTilgangNode.asText().split(',').map(String::trim)
+                        else -> påkrevdTilgangNode.map { it.asText() }
+                    }
+                val opprettet =
+                    node
+                        .path("opprettet")
+                        .takeIf(JsonNode::isTextual)
+                        ?.asText()
+                        ?.let { ZonedDateTime.parse(it) }
+                        ?: ZonedDateTime.ofInstant(Instant.EPOCH, ZoneId.systemDefault())
                 return implementasjoner.firstNotNullOfOrNull { deserialiser ->
                     deserialiser(id, type, opprettet, påkrevdTilganger, node.path("data"))
                 }
@@ -43,7 +52,6 @@ sealed class MaskertVerdi {
                 null
             }
         }
-
     }
 
     protected abstract val id: UUID
@@ -51,19 +59,34 @@ sealed class MaskertVerdi {
     protected open val opprettet: ZonedDateTime = ZonedDateTime.now()
     protected open val påkrevdTilganger: List<String> = emptyList()
 
-    suspend fun låsOpp(tilganger: List<String>?, call: ApplicationCall, logg: Logg) {
+    suspend fun låsOpp(
+        tilganger: List<String>?,
+        call: ApplicationCall,
+        logg: Logg,
+    ) {
         if (!vurderTilgang(call, logg, tilganger)) return
         håndterRespons(call)
     }
 
-    suspend fun visMetadata(tilganger: List<String>?, call: ApplicationCall, logg: Logg) {
+    suspend fun visMetadata(
+        tilganger: List<String>?,
+        call: ApplicationCall,
+        logg: Logg,
+    ) {
         if (!vurderTilgang(call, logg, tilganger)) return
-        call.respondText("""{
+        call.respondText(
+            """{
     "opprettet": "${this.opprettet}"
-}""", ContentType.Application.Json)
+}""",
+            ContentType.Application.Json,
+        )
     }
 
-    private suspend fun vurderTilgang(call: ApplicationCall, logg: Logg, tilganger: List<String>?): Boolean {
+    private suspend fun vurderTilgang(
+        call: ApplicationCall,
+        logg: Logg,
+        tilganger: List<String>?,
+    ): Boolean {
         if (påkrevdTilganger.isEmpty()) {
             logg.sikker().info("verdien har ingen påkrevde tilganger, og tilgangen innfris")
             return true
@@ -84,40 +107,56 @@ sealed class MaskertVerdi {
         return true
     }
 
-    fun lagre(maskeringer: Maskeringtjeneste, objectMapper: ObjectMapper): UUID {
-        return maskeringer.lagre(id, json(objectMapper))
-    }
+    fun lagre(
+        maskeringer: Maskeringtjeneste,
+        objectMapper: ObjectMapper,
+    ): UUID = maskeringer.lagre(id, json(objectMapper))
 
     protected abstract suspend fun håndterRespons(call: ApplicationCall)
+
     protected abstract fun json(objectMapper: ObjectMapper): String
 
-    protected fun json(objectMapper: ObjectMapper, type: String) = objectMapper.writeValueAsString(
+    protected fun json(
+        objectMapper: ObjectMapper,
+        type: String,
+    ) = objectMapper.writeValueAsString(
         mapOf(
             "id" to id,
             "type" to type,
             "opprettet" to opprettet,
             "påkrevdTilgang" to påkrevdTilganger,
-            "data" to data
-        )
+            "data" to data,
+        ),
     )
 
     class Tekst(
         override val id: UUID,
         private val tekst: String,
         override val påkrevdTilganger: List<String> = emptyList(),
-        override val opprettet: ZonedDateTime = ZonedDateTime.now()
+        override val opprettet: ZonedDateTime = ZonedDateTime.now(),
     ) : MaskertVerdi() {
         override val data = mapOf("tekst" to tekst)
+
         override fun json(objectMapper: ObjectMapper) = json(objectMapper, Teksttype)
+
         override suspend fun håndterRespons(call: ApplicationCall) {
             call.respond(Response(tekst))
         }
 
-        private data class Response(val text: String)
+        private data class Response(
+            val text: String,
+        )
 
         companion object {
             private const val Teksttype = "tekst"
-            fun fraJson(id: UUID, type: String, opprettet: ZonedDateTime, påkrevdTilgang: List<String>, data: JsonNode): Tekst? {
+
+            fun fraJson(
+                id: UUID,
+                type: String,
+                opprettet: ZonedDateTime,
+                påkrevdTilgang: List<String>,
+                data: JsonNode,
+            ): Tekst? {
                 if (type != Teksttype) return null
                 return Tekst(id, data.path("tekst").asText(), påkrevdTilgang, opprettet)
             }
@@ -128,10 +167,12 @@ sealed class MaskertVerdi {
         override val id: UUID,
         private val url: String,
         override val påkrevdTilganger: List<String> = emptyList(),
-        override val opprettet: ZonedDateTime = ZonedDateTime.now()
+        override val opprettet: ZonedDateTime = ZonedDateTime.now(),
     ) : MaskertVerdi() {
         override val data = mapOf("url" to url)
+
         override fun json(objectMapper: ObjectMapper) = json(objectMapper, Urltype)
+
         override suspend fun håndterRespons(call: ApplicationCall) {
             try {
                 val uri = URI(url)
@@ -147,7 +188,14 @@ sealed class MaskertVerdi {
 
         companion object {
             private const val Urltype = "url"
-            fun fraJson(id: UUID, type: String, opprettet: ZonedDateTime, påkrevdTilgang: List<String>, data: JsonNode): Url? {
+
+            fun fraJson(
+                id: UUID,
+                type: String,
+                opprettet: ZonedDateTime,
+                påkrevdTilgang: List<String>,
+                data: JsonNode,
+            ): Url? {
                 if (type != Urltype) return null
                 return Url(id, data.path("url").asText(), påkrevdTilgang, opprettet)
             }

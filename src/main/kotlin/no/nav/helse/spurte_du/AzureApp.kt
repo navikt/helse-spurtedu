@@ -11,7 +11,11 @@ class AzureApp(
     private val issuer: String,
     private val clientId: String,
 ) {
-    fun konfigurerJwtAuth(logg: Logg, config: AuthenticationConfig, gruppetilganger: Gruppetilgangtjeneste) {
+    fun konfigurerJwtAuth(
+        logg: Logg,
+        config: AuthenticationConfig,
+        gruppetilganger: Gruppetilgangtjeneste,
+    ) {
         config.jwt {
             verifier(jwkProvider, issuer) {
                 withAudience(clientId)

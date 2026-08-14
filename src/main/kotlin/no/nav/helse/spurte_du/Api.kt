@@ -10,7 +10,10 @@ import io.ktor.server.util.*
 import no.nav.helse.spurte_du.SpurteDuPrinsipal.Companion.logg
 import java.util.*
 
-fun Route.api(logg: Logg, maskeringer: Maskeringtjeneste) {
+fun Route.api(
+    logg: Logg,
+    maskeringer: Maskeringtjeneste,
+) {
     route("/vis_meg") {
         get("{maskertId?}") {
             val (uuid, principal) = call.håndterVisMeg(logg) ?: return@get
@@ -32,7 +35,8 @@ fun Route.api(logg: Logg, maskeringer: Maskeringtjeneste) {
         }
     }
     get("/skjul_meg") {
-        call.respondText("""<!doctype html>
+        call.respondText(
+            """<!doctype html>
             <head>
                 <meta charset="utf-8" />
                 <title>Skjul meg!</title>
@@ -80,23 +84,32 @@ fun Route.api(logg: Logg, maskeringer: Maskeringtjeneste) {
             </pre>
            </body>
            </html>
-        """, ContentType.Text.Html)
+        """,
+            ContentType.Text.Html,
+        )
     }
     post("/skjul_meg") {
         val request = call.receiveNullable<SkjulMegRequest>()
-        val maskertVerdi = request?.tilMaskertVerdi() ?: return@post call.respond(HttpStatusCode.BadRequest, ApiFeilmelding(
-            """Du må angi en gyldig json-kropp. Eksempel: { "url": "en-url", "påkrevdTilgang": "<en azure gruppe-ID eller NAV-epost>" } eller { "tekst": "en tekst" } """
-        ))
+        val maskertVerdi =
+            request?.tilMaskertVerdi() ?: return@post call.respond(
+                HttpStatusCode.BadRequest,
+                ApiFeilmelding(
+                    """Du må angi en gyldig json-kropp. Eksempel: { "url": "en-url", "påkrevdTilgang": "<en azure gruppe-ID eller NAV-epost>" } eller { "tekst": "en tekst" } """,
+                ),
+            )
         val id = maskeringer.lagre(maskertVerdi)
         val path = "/vis_meg/$id"
-        call.respond(SkjulMegRespons(
-            id = id,
-            url = call.url {
-                set("https", port = 443)
-                path(path)
-           },
-            path = path
-        ))
+        call.respond(
+            SkjulMegRespons(
+                id = id,
+                url =
+                    call.url {
+                        set("https", port = 443)
+                        path(path)
+                    },
+                path = path,
+            ),
+        )
     }
 }
 
@@ -106,12 +119,13 @@ private suspend fun ApplicationCall.håndterVisMeg(logg: Logg): Pair<UUID, Spurt
         respondText("Maksert id mangler fra url", status = HttpStatusCode.BadRequest)
         return null
     }
-    val uuid = try {
-        UUID.fromString(id)
-    } catch (err: IllegalArgumentException) {
-        respondText("Maksert id er jo ikke gyldig uuid", status = HttpStatusCode.BadRequest)
-        return null
-    }
+    val uuid =
+        try {
+            UUID.fromString(id)
+        } catch (err: IllegalArgumentException) {
+            respondText("Maksert id er jo ikke gyldig uuid", status = HttpStatusCode.BadRequest)
+            return null
+        }
 
     val principal = principal<SpurteDuPrinsipal>()
     principal.logg(logg)
@@ -119,17 +133,19 @@ private suspend fun ApplicationCall.håndterVisMeg(logg: Logg): Pair<UUID, Spurt
 }
 
 data class ApiFeilmelding(
-    val feilbeskrivelse: String
+    val feilbeskrivelse: String,
 )
+
 data class SkjulMegRespons(
     val id: UUID,
     val url: String,
-    val path: String
+    val path: String,
 )
+
 data class SkjulMegRequest(
     val url: String?,
     val tekst: String?,
-    val påkrevdTilgang: String?
+    val påkrevdTilgang: String?,
 ) {
     fun tilMaskertVerdi(): MaskertVerdi? {
         val tilganger = påkrevdTilgang?.split(',')?.map(String::trim) ?: emptyList()
@@ -141,7 +157,10 @@ data class SkjulMegRequest(
     }
 }
 
-suspend fun ApplicationCall.`404`(logg: Logg, hjelpetekst: String) {
+suspend fun ApplicationCall.`404`(
+    logg: Logg,
+    hjelpetekst: String,
+) {
     logg.info(hjelpetekst)
     respondText("Finner ikke noe spesielt til deg", status = HttpStatusCode.NotFound)
 }

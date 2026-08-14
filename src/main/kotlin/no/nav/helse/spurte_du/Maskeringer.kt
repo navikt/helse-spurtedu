@@ -9,28 +9,57 @@ import redis.clients.jedis.exceptions.JedisException
 import java.util.*
 
 interface Maskeringtjeneste {
-    suspend fun visMaskertVerdi(logg: Logg, call: ApplicationCall, id: UUID, tilganger: List<String>?)
-    suspend fun visMetadata(logg: Logg, call: ApplicationCall, id: UUID, tilganger: List<String>?)
+    suspend fun visMaskertVerdi(
+        logg: Logg,
+        call: ApplicationCall,
+        id: UUID,
+        tilganger: List<String>?,
+    )
+
+    suspend fun visMetadata(
+        logg: Logg,
+        call: ApplicationCall,
+        id: UUID,
+        tilganger: List<String>?,
+    )
+
     fun lagre(maskertVerdi: MaskertVerdi): UUID
-    fun lagre(id: UUID, data: String): UUID
+
+    fun lagre(
+        id: UUID,
+        data: String,
+    ): UUID
 }
 
 class Maskeringer(
     private val jedisPool: JedisPool,
-    private val objectMapper: ObjectMapper
+    private val objectMapper: ObjectMapper,
 ) : Maskeringtjeneste {
-
-    override suspend fun visMaskertVerdi(logg: Logg, call: ApplicationCall, id: UUID, tilganger: List<String>?) {
+    override suspend fun visMaskertVerdi(
+        logg: Logg,
+        call: ApplicationCall,
+        id: UUID,
+        tilganger: List<String>?,
+    ) {
         val verdi = hentMaskertVerdi(call, logg, id) ?: return
         verdi.låsOpp(tilganger, call, logg)
     }
 
-    override suspend fun visMetadata(logg: Logg, call: ApplicationCall, id: UUID, tilganger: List<String>?) {
+    override suspend fun visMetadata(
+        logg: Logg,
+        call: ApplicationCall,
+        id: UUID,
+        tilganger: List<String>?,
+    ) {
         val verdi = hentMaskertVerdi(call, logg, id) ?: return
         verdi.visMetadata(tilganger, call, logg)
     }
 
-    private suspend fun hentMaskertVerdi(call: ApplicationCall, logg: Logg, id: UUID): MaskertVerdi? {
+    private suspend fun hentMaskertVerdi(
+        call: ApplicationCall,
+        logg: Logg,
+        id: UUID,
+    ): MaskertVerdi? {
         try {
             jedisPool.resource.use { jedis ->
                 val maskertVerdi = jedis.hget(maskerteVerdier, "$id")
@@ -49,22 +78,23 @@ class Maskeringer(
         }
     }
 
-    override fun lagre(maskertVerdi: MaskertVerdi): UUID {
-        return maskertVerdi.lagre(this, objectMapper)
-    }
+    override fun lagre(maskertVerdi: MaskertVerdi): UUID = maskertVerdi.lagre(this, objectMapper)
 
-    override fun lagre(id: UUID, data: String): UUID {
-        return jedisPool.resource.use { jedis ->
+    override fun lagre(
+        id: UUID,
+        data: String,
+    ): UUID =
+        jedisPool.resource.use { jedis ->
             jedis.hset(maskerteVerdier, "$id", data)
             id
         }
-    }
 
     companion object {
         private const val maskerteVerdier = "maskerte_verdier"
 
-        fun lagMaskeringer(jedisPool: JedisPool, objectMapper: ObjectMapper): Maskeringer {
-            return Maskeringer(jedisPool, objectMapper)
-        }
+        fun lagMaskeringer(
+            jedisPool: JedisPool,
+            objectMapper: ObjectMapper,
+        ): Maskeringer = Maskeringer(jedisPool, objectMapper)
     }
 }
