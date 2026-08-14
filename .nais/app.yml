@@ -6,7 +6,6 @@ metadata:
   labels:
     team: tbd
 spec:
-  image: {{image}}
   liveness:
     path: /isalive
   readiness:

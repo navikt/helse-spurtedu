@@ -1,88 +1,24 @@
+group = "no.nav.helse"
+
 plugins {
-    kotlin("jvm") version "2.3.0"
+    alias(libs.plugins.sas.deployable)
 }
 
-val mainClass = "no.nav.helse.spurte_du.AppKt"
-
-group = "no.nav.helse"
-version = properties["version"] ?: "local-build"
-
-val ktorVersion = "3.2.3"
-val junitJupiterVersion = "5.12.1"
-val logbackClassicVersion = "1.5.25"
-val logbackEncoderVersion = "8.0"
-val tbdLibsVersion = "2026.01.22-09.16-1d3f6039"
-
-// Sett opp repositories basert på om vi kjører i CI eller ikke
-// Jf. https://github.com/navikt/utvikling/blob/main/docs/teknisk/Konsumere%20biblioteker%20fra%20Github%20Package%20Registry.md
-repositories {
-    mavenCentral()
-    if (providers.environmentVariable("GITHUB_ACTIONS").orNull == "true") {
-        maven {
-            url = uri("https://maven.pkg.github.com/navikt/maven-release")
-            credentials {
-                username = "token"
-                password = providers.environmentVariable("GITHUB_TOKEN").orNull!!
-            }
-        }
-    } else {
-        maven("https://repo.adeo.no/repository/github-package-registry-navikt/")
-    }
+sasDeployable {
+    mainClass = "no.nav.helse.spurte_du.AppKt"
+    imageName = "spurtedu"
 }
 
 dependencies {
-    api("ch.qos.logback:logback-classic:$logbackClassicVersion")
-    api("net.logstash.logback:logstash-logback-encoder:$logbackEncoderVersion")
-
-    implementation("com.github.navikt.tbd-libs:naisful-app:$tbdLibsVersion")
-
-    api("io.ktor:ktor-server-auth:$ktorVersion")
-    api("io.ktor:ktor-server-auth-jwt:$ktorVersion") {
+    implementation(libs.bundles.logback)
+    implementation(libs.bundles.ktor.client)
+    implementation(libs.jedis)
+    implementation(libs.tbdLibs.naisfulApp)
+    implementation(libs.tbdLibs.azureTokenClient)
+    implementation(libs.ktor.server.auth)
+    implementation(libs.ktor.server.auth.jwt) {
         exclude(group = "junit")
     }
 
-    api("com.github.navikt.tbd-libs:azure-token-client:$tbdLibsVersion")
-
-    api("redis.clients:jedis:5.1.0")
-
-    implementation("io.ktor:ktor-client-auth:$ktorVersion")
-    implementation("io.ktor:ktor-client-cio:$ktorVersion")
-
-    testImplementation("com.github.navikt.tbd-libs:naisful-test-app:$tbdLibsVersion")
-
-    testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")
-    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
-}
-
-kotlin {
-    jvmToolchain {
-        languageVersion.set(JavaLanguageVersion.of("21"))
-    }
-}
-
-tasks {
-    withType<Jar> {
-        archiveBaseName.set("app")
-
-        manifest {
-            attributes["Main-Class"] = mainClass
-            attributes["Class-Path"] = configurations.runtimeClasspath.get().joinToString(separator = " ") {
-                it.name
-            }
-        }
-
-        doLast {
-            configurations.runtimeClasspath.get().forEach {
-                val file = File("${layout.buildDirectory.get()}/libs/${it.name}")
-                if (!file.exists()) it.copyTo(file)
-            }
-        }
-    }
-
-    withType<Test> {
-        useJUnitPlatform()
-        testLogging {
-            events("skipped", "failed")
-        }
-    }
+    testImplementation(libs.tbdLibs.naisfulTestApp)
 }

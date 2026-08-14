@@ -1,0 +1,33 @@
+[versions]
+ktor = "3.5.2"
+tbdLibs = "2026.01.22-09.16-1d3f6039"
+sasGradlePlugins = "20260807.0944"
+
+[libraries]
+ktor-client-auth = { module = "io.ktor:ktor-client-auth", version.ref = "ktor" }
+ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
+
+ktor-server-auth = { module = "io.ktor:ktor-server-auth", version.ref = "ktor" }
+ktor-server-auth-jwt = { module = "io.ktor:ktor-server-auth-jwt", version.ref = "ktor" }
+
+logback-classic = "ch.qos.logback:logback-classic:1.5.38"
+logback-logstashEncoder = "net.logstash.logback:logstash-logback-encoder:8.1"
+
+jedis = "redis.clients:jedis:5.2.0"
+
+tbdLibs-azureTokenClient = { module = "com.github.navikt.tbd-libs:azure-token-client", version.ref = "tbdLibs" }
+tbdLibs-naisfulApp = { module = "com.github.navikt.tbd-libs:naisful-app", version.ref = "tbdLibs" }
+tbdLibs-naisfulTestApp = { module = "com.github.navikt.tbd-libs:naisful-test-app", version.ref = "tbdLibs" }
+
+[bundles]
+ktor-client = [
+    "ktor-client-auth",
+    "ktor-client-cio"
+]
+logback = [
+    "logback-classic",
+    "logback-logstashEncoder"
+]
+
+[plugins]
+sas-deployable = { id = "no.nav.helse.sas.sas-deployable", version.ref = "sasGradlePlugins" }
