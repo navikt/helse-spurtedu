@@ -11,7 +11,7 @@ ktor-server-auth = { module = "io.ktor:ktor-server-auth", version.ref = "ktor" }
 ktor-server-auth-jwt = { module = "io.ktor:ktor-server-auth-jwt", version.ref = "ktor" }
 
 logback-classic = "ch.qos.logback:logback-classic:1.6.1"
-logback-logstashEncoder = "net.logstash.logback:logstash-logback-encoder:8.1"
+logback-logstashEncoder = "net.logstash.logback:logstash-logback-encoder:9.0"
 
 jedis = "redis.clients:jedis:7.5.3"
 
