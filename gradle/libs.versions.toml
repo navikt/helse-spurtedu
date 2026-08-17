@@ -13,7 +13,7 @@ ktor-server-auth-jwt = { module = "io.ktor:ktor-server-auth-jwt", version.ref = 
 logback-classic = "ch.qos.logback:logback-classic:1.6.1"
 logback-logstashEncoder = "net.logstash.logback:logstash-logback-encoder:9.0"
 
-jedis = "redis.clients:jedis:7.5.3"
+jedis = "redis.clients:jedis:8.0.0"
 
 tbdLibs-azureTokenClient = { module = "com.github.navikt.tbd-libs:azure-token-client", version.ref = "tbdLibs" }
 tbdLibs-naisfulApp = { module = "com.github.navikt.tbd-libs:naisful-app", version.ref = "tbdLibs" }
