@@ -1,6 +1,6 @@
 [versions]
 ktor = "3.5.2"
-tbdLibs = "20260811.1310"
+tbdLibs = "20260821.1252"
 sasGradlePlugins = "20260807.0944"
 
 [libraries]
