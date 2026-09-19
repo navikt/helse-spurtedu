@@ -1,7 +1,7 @@
 [versions]
 ktor = "3.5.2"
 tbdLibs = "20260821.1252"
-sasGradlePlugins = "20260918.1322"
+sasGradlePlugins = "20260918.1635"
 
 [libraries]
 ktor-client-auth = { module = "io.ktor:ktor-client-auth", version.ref = "ktor" }
