@@ -1,5 +1,5 @@
 [versions]
-ktor = "3.5.2"
+ktor = "3.6.0"
 tbdLibs = "20260821.1252"
 sasGradlePlugins = "20260923.0907"
 
