@@ -1,10 +1,10 @@
 group = "no.nav.helse"
 
 plugins {
-    alias(libs.plugins.sas.deployable)
+    alias(libs.plugins.sykepenger.deployable)
 }
 
-sasDeployable {
+sykepengerDeployable {
     mainClass = "no.nav.helse.spurte_du.AppKt"
     imageName = "spurtedu"
 }

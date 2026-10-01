@@ -1,7 +1,7 @@
 [versions]
 ktor = "3.6.0"
 tbdLibs = "20260821.1252"
-sasGradlePlugins = "20260930.1152"
+sykepengerGradlePlugins = "20261001.1830"
 
 [libraries]
 ktor-client-auth = { module = "io.ktor:ktor-client-auth", version.ref = "ktor" }
@@ -30,4 +30,4 @@ logback = [
 ]
 
 [plugins]
-sas-deployable = { id = "no.nav.helse.sas.sas-deployable", version.ref = "sasGradlePlugins" }
+sykepenger-deployable = { id = "no.nav.sykepenger.deployable", version.ref = "sykepengerGradlePlugins" }
