@@ -13,10 +13,6 @@ spec:
   prometheus:
     path: /metrics
     enabled: true
-  ingresses:
-  {{# each ingress as |i| }}
-    - {{i}}
-  {{/each}}
   accessPolicy:
     outbound:
       rules:
@@ -33,7 +29,6 @@ spec:
       enabled: true
       autoLogin: false
     application:
-      tenant: {{ tenant }}
       enabled: true
       allowAllUsers: true
   valkey:

@@ -1,0 +1,6 @@
+spec:
+  ingresses:
+    - https://spurte-du.intern.dev.nav.no
+  azure:
+    application:
+      tenant: trygdeetaten.no

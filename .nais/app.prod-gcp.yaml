@@ -1,0 +1,7 @@
+spec:
+  ingresses:
+    - https://spurte-du.intern.nav.no
+    - https://spurte-du.ansatt.nav.no
+  azure:
+    application:
+      tenant: nav.no
