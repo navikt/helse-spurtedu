@@ -1,11 +1,11 @@
 package no.nav.helse.spurte_du
 
-import com.fasterxml.jackson.core.JsonParseException
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
+import tools.jackson.core.exc.StreamReadException
+import tools.jackson.databind.JsonNode
+import tools.jackson.databind.ObjectMapper
 import java.net.URI
 import java.time.Instant
 import java.time.ZoneId
@@ -28,25 +28,25 @@ sealed class MaskertVerdi {
                 logg.sikker().info("forsøker å deserialisere: $json")
                 val node = objectMapper.readTree(json)
                 if (!node.hasNonNull("id")) return null
-                val id = UUID.fromString(node.path("id").asText())
-                val type = node.path("type").takeIf(JsonNode::isTextual)?.asText() ?: return null
+                val id = UUID.fromString(node.path("id").asString())
+                val type = node.path("type").takeIf(JsonNode::isString)?.asString() ?: return null
                 val påkrevdTilgangNode = node.path("påkrevdTilgang")
                 val påkrevdTilganger =
                     when {
-                        påkrevdTilgangNode.isTextual -> påkrevdTilgangNode.asText().split(',').map(String::trim)
-                        else -> påkrevdTilgangNode.map { it.asText() }
+                        påkrevdTilgangNode.isString -> påkrevdTilgangNode.asString().split(',').map(String::trim)
+                        else -> påkrevdTilgangNode.values().map { it.asString() }
                     }
                 val opprettet =
                     node
                         .path("opprettet")
-                        .takeIf(JsonNode::isTextual)
-                        ?.asText()
+                        .takeIf(JsonNode::isString)
+                        ?.asString()
                         ?.let { ZonedDateTime.parse(it) }
                         ?: ZonedDateTime.ofInstant(Instant.EPOCH, ZoneId.systemDefault())
                 return implementasjoner.firstNotNullOfOrNull { deserialiser ->
                     deserialiser(id, type, opprettet, påkrevdTilganger, node.path("data"))
                 }
-            } catch (err: JsonParseException) {
+            } catch (err: StreamReadException) {
                 null
             } catch (err: IllegalArgumentException) {
                 null
@@ -158,7 +158,7 @@ sealed class MaskertVerdi {
                 data: JsonNode,
             ): Tekst? {
                 if (type != Teksttype) return null
-                return Tekst(id, data.path("tekst").asText(), påkrevdTilgang, opprettet)
+                return Tekst(id, data.path("tekst").asString(), påkrevdTilgang, opprettet)
             }
         }
     }
@@ -197,7 +197,7 @@ sealed class MaskertVerdi {
                 data: JsonNode,
             ): Url? {
                 if (type != Urltype) return null
-                return Url(id, data.path("url").asText(), påkrevdTilgang, opprettet)
+                return Url(id, data.path("url").asString(), påkrevdTilgang, opprettet)
             }
         }
     }

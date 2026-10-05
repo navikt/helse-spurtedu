@@ -1,10 +1,9 @@
 package no.nav.helse.spurte_du
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.google.gson.JsonParseException
+import tools.jackson.databind.ObjectMapper
+import tools.jackson.databind.cfg.DateTimeFeature
+import tools.jackson.module.kotlin.jacksonMapperBuilder
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -13,9 +12,9 @@ import java.time.Duration
 
 fun main() {
     val objectMapper =
-        jacksonObjectMapper()
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-            .registerModule(JavaTimeModule())
+        jacksonMapperBuilder()
+            .disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
+            .build()
 
     println(sendRequest(objectMapper, mapOf("tekst" to "skjul denne meldingen")))
 }
@@ -44,7 +43,7 @@ private fun sendRequest(
     val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
 
     return try {
-        objectMapper.readTree(response.body()).path("path").asText()
+        objectMapper.readTree(response.body()).path("path").asString()
     } catch (err: JsonParseException) {
         null
     }

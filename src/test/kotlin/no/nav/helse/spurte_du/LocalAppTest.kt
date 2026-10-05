@@ -2,12 +2,6 @@ package no.nav.helse.spurte_du
 
 import com.auth0.jwt.interfaces.Claim
 import com.auth0.jwt.interfaces.Payload
-import com.fasterxml.jackson.core.util.DefaultIndenter
-import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.ktor.server.application.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
@@ -15,6 +9,11 @@ import io.ktor.server.cio.*
 import io.ktor.server.engine.*
 import no.nav.helse.spurte_du.LokalBruker.Companion.håndterAutentisering
 import org.slf4j.LoggerFactory
+import tools.jackson.core.util.DefaultIndenter
+import tools.jackson.core.util.DefaultPrettyPrinter
+import tools.jackson.databind.ObjectMapper
+import tools.jackson.databind.cfg.DateTimeFeature
+import tools.jackson.module.kotlin.jacksonMapperBuilder
 import java.time.Instant
 import java.util.*
 
@@ -59,15 +58,13 @@ fun main() {
 
     val logg = Logg(LoggerFactory.getLogger("åpenLogg"), LoggerFactory.getLogger("sikkerLogg"))
     val objectMapper =
-        jacksonObjectMapper()
-            .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-            .registerModule(JavaTimeModule())
-            .setDefaultPrettyPrinter(
-                DefaultPrettyPrinter().apply {
-                    indentArraysWith(DefaultPrettyPrinter.FixedSpaceIndenter.instance)
-                    indentObjectsWith(DefaultIndenter("  ", "\n"))
-                },
-            )
+        jacksonMapperBuilder()
+            .disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
+            .defaultPrettyPrinter(
+                DefaultPrettyPrinter()
+                    .withArrayIndenter(DefaultPrettyPrinter.FixedSpaceIndenter.instance())
+                    .withObjectIndenter(DefaultIndenter("  ", "\n")),
+            ).build()
     val maskeringer = LokaleMaskeringer(lokaleMaskeringer, objectMapper)
     val prinsipaler = LokalePrinsipaler(logg, lokaleBrukere)
 

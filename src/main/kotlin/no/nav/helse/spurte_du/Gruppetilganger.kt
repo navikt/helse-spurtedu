@@ -1,7 +1,5 @@
 package no.nav.helse.spurte_du
 
-import com.fasterxml.jackson.databind.JsonNode
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.github.navikt.tbd_libs.azure.AzureTokenProvider
 import com.github.navikt.tbd_libs.result_object.getOrThrow
 import io.ktor.client.*
@@ -11,6 +9,8 @@ import io.ktor.http.*
 import kotlinx.coroutines.runBlocking
 import redis.clients.jedis.JedisPool
 import redis.clients.jedis.params.SetParams
+import tools.jackson.databind.JsonNode
+import tools.jackson.databind.ObjectMapper
 import java.security.MessageDigest
 import java.time.Duration
 
@@ -70,7 +70,8 @@ class Gruppetilganger(
                         .readTree(mellomlagretVerdi)
                         .path("grupper")
                         .takeIf(JsonNode::isArray)
-                        ?.map { it.asText() }
+                        ?.values()
+                        ?.map { it.asString() }
                 }
             }
         } catch (err: Exception) {
@@ -114,8 +115,8 @@ class Gruppetilganger(
             }
         logg.sikker().info("respons fra microsoft graph:\n$body")
         val json = objectMapper.readTree(body)
-        return json.path("value").map { medlemskap ->
-            medlemskap.path("id").asText()
+        return json.path("value").values().map { medlemskap ->
+            medlemskap.path("id").asString()
         }
     }
 

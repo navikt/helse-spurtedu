@@ -1,11 +1,11 @@
 package no.nav.helse.spurte_du
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import redis.clients.jedis.JedisPool
 import redis.clients.jedis.exceptions.JedisException
+import tools.jackson.databind.ObjectMapper
 import java.util.*
 
 interface Maskeringtjeneste {

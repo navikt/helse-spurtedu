@@ -1,12 +1,6 @@
 package no.nav.helse.spurte_du
 
 import com.auth0.jwk.JwkProviderBuilder
-import com.fasterxml.jackson.core.util.DefaultIndenter
-import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.azure.AzureAuthMethod
 import com.github.navikt.tbd_libs.azure.AzureTokenClient
 import com.github.navikt.tbd_libs.naisful.naisApp
@@ -26,6 +20,11 @@ import redis.clients.jedis.DefaultJedisClientConfig
 import redis.clients.jedis.HostAndPort
 import redis.clients.jedis.JedisPool
 import redis.clients.jedis.JedisPoolConfig
+import tools.jackson.core.util.DefaultIndenter
+import tools.jackson.core.util.DefaultPrettyPrinter
+import tools.jackson.databind.ObjectMapper
+import tools.jackson.databind.cfg.DateTimeFeature
+import tools.jackson.module.kotlin.jacksonMapperBuilder
 import java.net.URI
 import java.time.Duration
 import io.ktor.client.engine.cio.CIO as ClientEngineCioCIO
@@ -34,15 +33,13 @@ private val logg = LoggerFactory.getLogger("no.nav.helse.spurte_du.App")
 private val sikkerlogg = LoggerFactory.getLogger("tjenestekall")
 
 private val objectmapper get() =
-    jacksonObjectMapper()
-        .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-        .registerModule(JavaTimeModule())
-        .setDefaultPrettyPrinter(
-            DefaultPrettyPrinter().apply {
-                indentArraysWith(DefaultPrettyPrinter.FixedSpaceIndenter.instance)
-                indentObjectsWith(DefaultIndenter("  ", "\n"))
-            },
-        )
+    jacksonMapperBuilder()
+        .disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
+        .defaultPrettyPrinter(
+            DefaultPrettyPrinter()
+                .withArrayIndenter(DefaultPrettyPrinter.FixedSpaceIndenter.instance())
+                .withObjectIndenter(DefaultIndenter("  ", "\n")),
+        ).build()
 
 fun main() {
     val logg = Logg(logg, sikkerlogg)

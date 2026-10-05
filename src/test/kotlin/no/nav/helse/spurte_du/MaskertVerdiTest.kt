@@ -1,14 +1,13 @@
 package no.nav.helse.spurte_du
 
-import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import io.ktor.server.application.ApplicationCall
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.fail
 import org.slf4j.LoggerFactory
+import tools.jackson.databind.cfg.DateTimeFeature
+import tools.jackson.module.kotlin.jacksonMapperBuilder
 import java.util.UUID
 
 class MaskertVerdiTest {
@@ -16,9 +15,9 @@ class MaskertVerdiTest {
     fun `serialisering`() {
         val testMaskeringstjeneste = TestMaskeringstjeneste()
         val objectMapper =
-            jacksonObjectMapper()
-                .registerModule(JavaTimeModule())
-                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+            jacksonMapperBuilder()
+                .disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
+                .build()
         val verdi = MaskertVerdi.Tekst(UUID.fromString("ec0d49ab-b42a-4626-a7de-3951d9ed5038"), "Hei, Gruppe1", listOf("gruppe1"))
 
         verdi.lagre(testMaskeringstjeneste, objectMapper)

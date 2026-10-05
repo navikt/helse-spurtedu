@@ -1,10 +1,5 @@
 package no.nav.helse.spurte_du
 
-import com.fasterxml.jackson.core.util.DefaultIndenter
-import com.fasterxml.jackson.core.util.DefaultPrettyPrinter
-import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.github.navikt.tbd_libs.naisful.test.TestContext
 import com.github.navikt.tbd_libs.naisful.test.naisfulTestApp
 import io.ktor.client.call.body
@@ -17,18 +12,20 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.slf4j.LoggerFactory
+import tools.jackson.core.util.DefaultIndenter
+import tools.jackson.core.util.DefaultPrettyPrinter
+import tools.jackson.databind.cfg.DateTimeFeature
+import tools.jackson.module.kotlin.jacksonMapperBuilder
 import java.util.*
 
 private val objectmapper get() =
-    jacksonObjectMapper()
-        .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-        .registerModule(JavaTimeModule())
-        .setDefaultPrettyPrinter(
-            DefaultPrettyPrinter().apply {
-                indentArraysWith(DefaultPrettyPrinter.FixedSpaceIndenter.instance)
-                indentObjectsWith(DefaultIndenter("  ", "\n"))
-            },
-        )
+    jacksonMapperBuilder()
+        .disable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
+        .defaultPrettyPrinter(
+            DefaultPrettyPrinter()
+                .withArrayIndenter(DefaultPrettyPrinter.FixedSpaceIndenter.instance())
+                .withObjectIndenter(DefaultIndenter("  ", "\n")),
+        ).build()
 
 class AppTest {
     private val testlogg =
