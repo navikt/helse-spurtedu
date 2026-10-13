@@ -20,10 +20,7 @@ spec:
           namespace: nais-system
     inbound:
       rules:
-        - application: spammer
-        - application: spaghet
         - application: spanner
-        - application: spoiler
   azure:
     sidecar:
       enabled: true
